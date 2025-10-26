@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_ver_terrenos"
+        android:title="Ver Terrenos"
+        android:icon="@android:drawable/ic_menu_mapmode" />
+    <item
+        android:id="@+id/menu_comentarios"
+        android:title="Comentarios"
+        android:icon="@android:drawable/ic_menu_edit" />
+</menu>
