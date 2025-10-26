@@ -48,6 +48,13 @@ dependencies {
     implementation("com.google.android.gms:play-services-maps:17.0.0")
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
     implementation("org.json:json:20230227")
+    // Para facilitar el manejo de JSON
+    implementation("com.google.code.gson:gson:2.10.1")
+
+// Ya deberías tener esta (o una similar) por OkHttp y los mapa
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
+    implementation(libs.androidx.recyclerview)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
