@@ -1,5 +1,8 @@
 package com.example.apiagrovida
 
+import android.Manifest
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -16,6 +19,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.material.navigation.NavigationView
 import androidx.core.view.GravityCompat
+import androidx.core.content.ContextCompat
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import org.json.JSONArray
@@ -60,6 +64,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.fragmentMap) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
+        // Permisos y canal de notificaciones
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
+        }
+        NotificationUtils.ensureChannel(this)
+
+        // Arrancar el servicio Foreground de clima
+        startWeatherService()
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -70,19 +83,34 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         terrenoRepo.cargarTerrenos(map, markerTerrenoMap, this)
 
         map.setOnMapClickListener { latLng ->
-            MapUtils.mostrarDialogoAgregarTerreno(this, latLng, weatherService, terrenoRepo, map, markerTerrenoMap)
+            MapUtils.mostrarDialogoAgregarTerreno(
+                this, latLng, weatherService, terrenoRepo, map, markerTerrenoMap
+            )
         }
 
         map.setOnMarkerClickListener { marker ->
             val terrenoId = markerTerrenoMap[marker]
             if (terrenoId != null) {
-                MapUtils.mostrarDialogoComentarios(this, terrenoId, marker.title ?: "Terreno", comentarioRepo)
+                MapUtils.mostrarDialogoComentarios(
+                    this, terrenoId, marker.title ?: "Terreno", comentarioRepo
+                )
             }
             true
         }
     }
 
-    // 🔹 Mostrar lista de terrenos y permitir editar/eliminar
+    // Iniciar/Detener servicio Foreground
+    private fun startWeatherService() {
+        val i = Intent(this, WeatherForegroundService::class.java)
+        ContextCompat.startForegroundService(this, i)
+    }
+
+    private fun stopWeatherService() {
+        val i = Intent(this, WeatherForegroundService::class.java)
+        stopService(i)
+    }
+
+    // Lista de terrenos
     private fun mostrarListaTerrenos() {
         val client = ApiClient.client
         val request = Request.Builder().url("${ApiClient.BASE_URL}/terrenos").get().build()
@@ -123,7 +151,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         })
     }
 
-    // 🔹 Opciones para editar o eliminar
     private fun mostrarOpcionesTerreno(id: Int, nombreActual: String) {
         val opciones = arrayOf("Editar nombre", "Eliminar terreno", "Cancelar")
 
@@ -139,14 +166,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             .show()
     }
 
-    // 🔹 Diálogo para editar nombre del terreno
     private fun mostrarDialogoEditarTerreno(id: Int, nombreActual: String) {
         val input = EditText(this)
         input.setText(nombreActual)
-        val layout = LinearLayout(this)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(40, 30, 40, 0)
-        layout.addView(input)
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 30, 40, 0)
+            addView(input)
+        }
 
         AlertDialog.Builder(this)
             .setTitle("Editar nombre del terreno")
@@ -163,7 +190,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             .show()
     }
 
-    // 🔹 Petición PUT al backend
     private fun editarTerreno(id: Int, nuevoNombre: String) {
         val client = ApiClient.client
         val json = JSONObject().put("nombre", nuevoNombre)
@@ -193,7 +219,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         })
     }
 
-    // 🔹 Petición DELETE al backend
     private fun eliminarTerreno(id: Int) {
         val client = ApiClient.client
         val request = Request.Builder()

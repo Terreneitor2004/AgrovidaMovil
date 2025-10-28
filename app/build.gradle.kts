@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
-
 android {
     namespace = "com.example.apiagrovida"
     compileSdk = 36
@@ -14,7 +13,6 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -36,25 +34,30 @@ android {
     }
 }
 
-
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.recyclerview)
 
-    // Google Maps SDK
-    implementation("com.google.android.gms:play-services-maps:17.0.0")
+    // Google Maps - usa UNA sola versión (la más nueva que ya tenías)
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+
+    // OkHttp - deja solo una versión (la más nueva)
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
+
+    // JSON
     implementation("org.json:json:20230227")
-    // Para facilitar el manejo de JSON
     implementation("com.google.code.gson:gson:2.10.1")
 
-// Ya deberías tener esta (o una similar) por OkHttp y los mapa
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
-    implementation("com.squareup.okhttp3:okhttp:4.9.3")
-    implementation(libs.androidx.recyclerview)
+    // WorkManager: solo si quieres la opción 1 (puedes comentar si no lo usarás)
+    // implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    // QUITA esta línea, es la que te metía el NotificationUtils ajeno:
+    // implementation(libs.androidbrowserhelper)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
