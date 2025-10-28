@@ -1,5 +1,4 @@
 package com.example.apiagrovida
-
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
@@ -16,11 +15,10 @@ import org.json.JSONObject
 import java.io.IOException
 
 class TerrenoRepository {
-
     private val client = ApiClient.client
     private val baseUrl = ApiClient.BASE_URL
-    private val weatherService = WeatherService() // 🌤️ nuevo
-
+    private val weatherService = WeatherService()
+    //GUARDAR TERRENO
     fun guardarTerreno(
         nombre: String,
         latLng: LatLng,
@@ -50,11 +48,11 @@ class TerrenoRepository {
                         try {
                             val id = JSONObject(body).getInt("id")
 
-                            // 🌤️ Primero agregamos el marcador con solo el nombre
+                            // Agregar marcador al mapa
                             val marker = map.addMarker(MarkerOptions().position(latLng).title(nombre))
                             if (marker != null) markerMap[marker] = id
 
-                            // Luego pedimos el clima y actualizamos el título
+                            // Obtener clima y actualizar título
                             weatherService.getWeather(latLng.latitude, latLng.longitude) { clima ->
                                 (context).runOnUiThread {
                                     marker?.title = "$nombre — $clima"
@@ -72,7 +70,7 @@ class TerrenoRepository {
             }
         })
     }
-
+    //CARGAR TERRENOS
     fun cargarTerrenos(map: GoogleMap, markerMap: MutableMap<Marker, Int>, context: Context) {
         val request = Request.Builder().url("$baseUrl/terrenos").get().build()
 
@@ -97,11 +95,11 @@ class TerrenoRepository {
                                 val nombre = t.getString("nombre")
                                 val latLng = LatLng(lat, lon)
 
-                                // 🌍 Creamos el marcador temporal con solo el nombre
+                                //Agregar marcador temporal con el nombre
                                 val marker = map.addMarker(MarkerOptions().position(latLng).title(nombre))
                                 if (marker != null) markerMap[marker] = id
 
-                                // 🌦️ Luego pedimos el clima y actualizamos el título
+                                //Pedir clima y actualizar título
                                 weatherService.getWeather(lat, lon) { clima ->
                                     (context).runOnUiThread {
                                         marker?.title = "$nombre — $clima"
@@ -111,6 +109,42 @@ class TerrenoRepository {
                         } catch (e: Exception) {
                             Log.e("TERR_REPO", "Error parseando terrenos", e)
                         }
+                    }
+                }
+            }
+        })
+    }
+    //ELIMINAR TERRENO (nuevo)
+    fun eliminarTerreno(
+        terrenoId: Int,
+        map: GoogleMap,
+        markerMap: MutableMap<Marker, Int>,
+        context: Context
+    ) {
+        val request = Request.Builder()
+            .url("$baseUrl/terrenos/$terrenoId")
+            .delete()
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                (context as AppCompatActivity).runOnUiThread {
+                    Toast.makeText(context, "Error al eliminar terreno: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+            override fun onResponse(call: Call, response: Response) {
+                (context as AppCompatActivity).runOnUiThread {
+                    if (response.isSuccessful) {
+                        //Buscar el marcador asociado al terreno
+                        val markerAEliminar = markerMap.entries.find { it.value == terrenoId }?.key
+                        //Eliminar marcador del mapa
+                        markerAEliminar?.remove()
+                        //Quitar del mapa interno
+                        markerMap.remove(markerAEliminar)
+
+                        Toast.makeText(context, "Terreno eliminado correctamente", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Error del servidor al eliminar", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
