@@ -1,4 +1,5 @@
 package com.example.apiagrovida
+
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
@@ -18,21 +19,29 @@ class TerrenoRepository {
     private val client = ApiClient.client
     private val baseUrl = ApiClient.BASE_URL
     private val weatherService = WeatherService()
-    //GUARDAR TERRENO
+
+    // GUARDAR TERRENO (agrega propietario)
     fun guardarTerreno(
         nombre: String,
+        propietario: String,                         // ← NUEVO
         latLng: LatLng,
         map: GoogleMap,
         markerMap: MutableMap<Marker, Int>,
         context: Context
     ) {
         val json = JSONObject()
-        json.put("nombre", nombre)
-        json.put("latitud", latLng.latitude)
-        json.put("longitud", latLng.longitude)
+            .put("nombre", nombre)
+            .put("propietario", propietario)         // ← NUEVO
+            .put("latitud", latLng.latitude)
+            .put("longitud", latLng.longitude)
 
-        val body = json.toString().toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
-        val request = Request.Builder().url("$baseUrl/terrenos").post(body).build()
+        val body = json.toString()
+            .toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+
+        val request = Request.Builder()
+            .url("$baseUrl/terrenos")
+            .post(body)
+            .build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
@@ -42,20 +51,25 @@ class TerrenoRepository {
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val body = response.body?.string()
+                val respBody = response.body?.string()
                 (context as AppCompatActivity).runOnUiThread {
-                    if (response.isSuccessful && body != null) {
+                    if (response.isSuccessful && respBody != null) {
                         try {
-                            val id = JSONObject(body).getInt("id")
+                            val id = JSONObject(respBody).getInt("id")
 
-                            // Agregar marcador al mapa
-                            val marker = map.addMarker(MarkerOptions().position(latLng).title(nombre))
+                            // Título base con nombre y propietario
+                            val tituloBase = if (propietario.isNotEmpty())
+                                "$nombre — $propietario" else nombre
+
+                            val marker = map.addMarker(
+                                MarkerOptions().position(latLng).title(tituloBase)
+                            )
                             if (marker != null) markerMap[marker] = id
 
                             // Obtener clima y actualizar título
                             weatherService.getWeather(latLng.latitude, latLng.longitude) { clima ->
                                 (context).runOnUiThread {
-                                    marker?.title = "$nombre — $clima"
+                                    marker?.title = "$tituloBase — $clima"
                                 }
                             }
 
@@ -64,14 +78,19 @@ class TerrenoRepository {
                             Toast.makeText(context, "Error al obtener ID", Toast.LENGTH_SHORT).show()
                         }
                     } else {
-                        Toast.makeText(context, "Error del servidor: $body", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "Error del servidor: $respBody", Toast.LENGTH_LONG).show()
                     }
                 }
             }
         })
     }
-    //CARGAR TERRENOS
-    fun cargarTerrenos(map: GoogleMap, markerMap: MutableMap<Marker, Int>, context: Context) {
+
+    // CARGAR TERRENOS (lee y muestra propietario si viene en el JSON)
+    fun cargarTerrenos(
+        map: GoogleMap,
+        markerMap: MutableMap<Marker, Int>,
+        context: Context
+    ) {
         val request = Request.Builder().url("$baseUrl/terrenos").get().build()
 
         client.newCall(request).enqueue(object : Callback {
@@ -82,27 +101,32 @@ class TerrenoRepository {
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val body = response.body?.string()
+                val respBody = response.body?.string()
                 (context as AppCompatActivity).runOnUiThread {
-                    if (response.isSuccessful && body != null) {
+                    if (response.isSuccessful && respBody != null) {
                         try {
-                            val array = JSONArray(body)
+                            val array = JSONArray(respBody)
                             for (i in 0 until array.length()) {
                                 val t = array.getJSONObject(i)
                                 val id = t.getInt("id")
                                 val lat = t.getDouble("latitud")
                                 val lon = t.getDouble("longitud")
                                 val nombre = t.getString("nombre")
+                                val propietario = t.optString("propietario", "") // ← NUEVO
                                 val latLng = LatLng(lat, lon)
 
-                                //Agregar marcador temporal con el nombre
-                                val marker = map.addMarker(MarkerOptions().position(latLng).title(nombre))
+                                val tituloBase = if (propietario.isNotEmpty())
+                                    "$nombre — $propietario" else nombre
+
+                                val marker = map.addMarker(
+                                    MarkerOptions().position(latLng).title(tituloBase)
+                                )
                                 if (marker != null) markerMap[marker] = id
 
-                                //Pedir clima y actualizar título
+                                // Pedir clima y actualizar título
                                 weatherService.getWeather(lat, lon) { clima ->
                                     (context).runOnUiThread {
-                                        marker?.title = "$nombre — $clima"
+                                        marker?.title = "$tituloBase — $clima"
                                     }
                                 }
                             }
@@ -114,7 +138,8 @@ class TerrenoRepository {
             }
         })
     }
-    //ELIMINAR TERRENO (nuevo)
+
+    // ELIMINAR TERRENO
     fun eliminarTerreno(
         terrenoId: Int,
         map: GoogleMap,
@@ -132,16 +157,13 @@ class TerrenoRepository {
                     Toast.makeText(context, "Error al eliminar terreno: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
+
             override fun onResponse(call: Call, response: Response) {
                 (context as AppCompatActivity).runOnUiThread {
                     if (response.isSuccessful) {
-                        //Buscar el marcador asociado al terreno
                         val markerAEliminar = markerMap.entries.find { it.value == terrenoId }?.key
-                        //Eliminar marcador del mapa
                         markerAEliminar?.remove()
-                        //Quitar del mapa interno
                         markerMap.remove(markerAEliminar)
-
                         Toast.makeText(context, "Terreno eliminado correctamente", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(context, "Error del servidor al eliminar", Toast.LENGTH_SHORT).show()

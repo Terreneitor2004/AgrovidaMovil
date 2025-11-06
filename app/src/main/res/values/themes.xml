@@ -2,6 +2,8 @@
     <!-- Base application theme. -->
     <style name="Base.Theme.ApiAgrovida" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     </style>
 

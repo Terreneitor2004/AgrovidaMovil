@@ -65,13 +65,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             .findFragmentById(R.id.fragmentMap) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        // Permisos y canal de notificaciones
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
         }
         NotificationUtils.ensureChannel(this)
 
-        // Arrancar el servicio Foreground de clima
         startWeatherService()
     }
 
@@ -99,7 +97,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    // Iniciar/Detener servicio Foreground
     private fun startWeatherService() {
         val i = Intent(this, WeatherForegroundService::class.java)
         ContextCompat.startForegroundService(this, i)
@@ -110,7 +107,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         stopService(i)
     }
 
-    // Lista de terrenos
+    // lista de terrenos: ahora muestra nombre y propietario
     private fun mostrarListaTerrenos() {
         val client = ApiClient.client
         val request = Request.Builder().url("${ApiClient.BASE_URL}/terrenos").get().build()
@@ -131,7 +128,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                     for (i in 0 until array.length()) {
                         val t = array.getJSONObject(i)
-                        nombres.add(t.getString("nombre"))
+                        val nombre = t.optString("nombre", "Terreno")
+                        val propietario = t.optString("propietario", "")
+                        val itemTexto = if (propietario.isNotEmpty())
+                            "$nombre — $propietario" else nombre
+                        nombres.add(itemTexto)
                         ids.add(t.getInt("id"))
                     }
 
@@ -168,7 +169,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun mostrarDialogoEditarTerreno(id: Int, nombreActual: String) {
         val input = EditText(this)
-        input.setText(nombreActual)
+        input.setText(nombreActual.substringBefore(" — ")) // si viene con propietario, solo toma el nombre
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(40, 30, 40, 0)

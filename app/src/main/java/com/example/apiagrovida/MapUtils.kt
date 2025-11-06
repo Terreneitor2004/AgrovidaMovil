@@ -17,20 +17,21 @@ object MapUtils {
         map: GoogleMap,
         markerMap: MutableMap<Marker, Int>
     ) {
-        val layout = LinearLayout(activity)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(50, 40, 50, 10)
+        val layout = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(50, 40, 50, 10)
+        }
 
-        val inputNombre = EditText(activity)
-        inputNombre.hint = "Nombre del terreno"
+        val inputNombre = EditText(activity).apply { hint = "Nombre del terreno" }
+        val inputPropietario = EditText(activity).apply { hint = "Propietario" }   // ← NUEVO
+        val tvClima = TextView(activity).apply { text = "Cargando clima..." }
+
         layout.addView(inputNombre)
-
-        val tvClima = TextView(activity)
-        tvClima.text = "Cargando clima..."
+        layout.addView(inputPropietario) // ← NUEVO
         layout.addView(tvClima)
 
         weatherService.getWeather(latLng.latitude, latLng.longitude) {
-            (activity).runOnUiThread { tvClima.text = "Clima: $it" }
+            activity.runOnUiThread { tvClima.text = "Clima: $it" }
         }
 
         AlertDialog.Builder(activity)
@@ -38,10 +39,25 @@ object MapUtils {
             .setView(layout)
             .setPositiveButton("Guardar") { dialog, _ ->
                 val nombre = inputNombre.text.toString().trim()
-                if (nombre.isEmpty()) {
-                    Toast.makeText(activity, "El nombre es obligatorio", Toast.LENGTH_SHORT).show()
-                } else {
-                    terrenoRepo.guardarTerreno(nombre, latLng, map, markerMap, activity)
+                val propietario = inputPropietario.text.toString().trim() // ← NUEVO
+                when {
+                    nombre.isEmpty() -> {
+                        Toast.makeText(activity, "El nombre es obligatorio", Toast.LENGTH_SHORT).show()
+                    }
+                    propietario.isEmpty() -> {
+                        Toast.makeText(activity, "El propietario es obligatorio", Toast.LENGTH_SHORT).show()
+                    }
+                    else -> {
+                        // Ajusta el repo para aceptar propietario (ver snippet abajo)
+                        terrenoRepo.guardarTerreno(
+                            nombre = nombre,
+                            propietario = propietario,              // ← NUEVO
+                            latLng = latLng,
+                            map = map,
+                            markerMap = markerMap,
+                            context = activity
+                        )
+                    }
                 }
                 dialog.dismiss()
             }
@@ -55,18 +71,17 @@ object MapUtils {
         nombreTerreno: String,
         comentarioRepo: ComentarioRepository
     ) {
-        val layout = LinearLayout(activity)
-        layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(50, 40, 50, 10)
+        val layout = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(50, 40, 50, 10)
+        }
 
-        val input = EditText(activity)
-        input.hint = "Escribe un comentario"
-        layout.addView(input)
-
+        val input = EditText(activity).apply { hint = "Escribe un comentario" }
         val scroll = ScrollView(activity)
-        val lista = LinearLayout(activity)
-        lista.orientation = LinearLayout.VERTICAL
+        val lista = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         scroll.addView(lista)
+
+        layout.addView(input)
         layout.addView(scroll)
 
         val dialog = AlertDialog.Builder(activity)
@@ -78,12 +93,11 @@ object MapUtils {
 
         dialog.setOnShowListener {
             comentarioRepo.cargarComentarios(terrenoId, lista, activity)
-            val btn = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            btn.setOnClickListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val texto = input.text.toString().trim()
                 if (texto.isNotEmpty()) {
-                    comentarioRepo.guardarComentario(terrenoId, texto, activity) {
-                        if (it) {
+                    comentarioRepo.guardarComentario(terrenoId, texto, activity) { ok ->
+                        if (ok) {
                             input.setText("")
                             comentarioRepo.cargarComentarios(terrenoId, lista, activity)
                         }
