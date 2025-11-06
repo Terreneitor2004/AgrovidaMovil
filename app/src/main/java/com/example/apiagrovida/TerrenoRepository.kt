@@ -14,16 +14,22 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
+import androidx.core.content.ContextCompat
+
+
 
 class TerrenoRepository {
     private val client = ApiClient.client
     private val baseUrl = ApiClient.BASE_URL
     private val weatherService = WeatherService()
 
+    // URL del receptor PHP (ajústala si cambia la ruta)
+    private val phpReceiverUrl = "http://34.132.245.216/Screens/recibeLands.php"
+
     // GUARDAR TERRENO (agrega propietario)
     fun guardarTerreno(
         nombre: String,
-        propietario: String,                         // ← NUEVO
+        propietario: String,
         latLng: LatLng,
         map: GoogleMap,
         markerMap: MutableMap<Marker, Int>,
@@ -31,7 +37,7 @@ class TerrenoRepository {
     ) {
         val json = JSONObject()
             .put("nombre", nombre)
-            .put("propietario", propietario)         // ← NUEVO
+            .put("propietario", propietario)
             .put("latitud", latLng.latitude)
             .put("longitud", latLng.longitude)
 
@@ -57,16 +63,27 @@ class TerrenoRepository {
                         try {
                             val id = JSONObject(respBody).getInt("id")
 
-                            // Título base con nombre y propietario
+                            // Enviar automáticamente al PHP con el JSON solicitado
+                            enviarTerrenoAlPhp(
+                                id = id,
+                                nombre = nombre,
+                                propietario = propietario,
+                                lat = latLng.latitude,
+                                lon = latLng.longitude
+                            )
+
                             val tituloBase = if (propietario.isNotEmpty())
                                 "$nombre — $propietario" else nombre
 
                             val marker = map.addMarker(
-                                MarkerOptions().position(latLng).title(tituloBase)
+                                MarkerOptions()
+                                    .position(latLng)
+                                    .title(tituloBase)
+                                    .icon(MapUtils.markerFromVector(context as AppCompatActivity, R.drawable.baseline_add_location_24,
+                                        ContextCompat.getColor(context, R.color.purple_500)))
                             )
                             if (marker != null) markerMap[marker] = id
 
-                            // Obtener clima y actualizar título
                             weatherService.getWeather(latLng.latitude, latLng.longitude) { clima ->
                                 (context).runOnUiThread {
                                     marker?.title = "$tituloBase — $clima"
@@ -112,18 +129,22 @@ class TerrenoRepository {
                                 val lat = t.getDouble("latitud")
                                 val lon = t.getDouble("longitud")
                                 val nombre = t.getString("nombre")
-                                val propietario = t.optString("propietario", "") // ← NUEVO
+                                val propietario = t.optString("propietario", "")
                                 val latLng = LatLng(lat, lon)
 
                                 val tituloBase = if (propietario.isNotEmpty())
                                     "$nombre — $propietario" else nombre
 
                                 val marker = map.addMarker(
-                                    MarkerOptions().position(latLng).title(tituloBase)
+                                    MarkerOptions()
+                                        .position(latLng)
+                                        .title(tituloBase)
+                                        .icon(MapUtils.markerFromVector(context as AppCompatActivity, R.drawable.baseline_add_location_24,
+                                            ContextCompat.getColor(context, R.color.purple_500)))
                                 )
+
                                 if (marker != null) markerMap[marker] = id
 
-                                // Pedir clima y actualizar título
                                 weatherService.getWeather(lat, lon) { clima ->
                                     (context).runOnUiThread {
                                         marker?.title = "$tituloBase — $clima"
@@ -169,6 +190,43 @@ class TerrenoRepository {
                         Toast.makeText(context, "Error del servidor al eliminar", Toast.LENGTH_SHORT).show()
                     }
                 }
+            }
+        })
+    }
+
+    // Envía el JSON al PHP: construye { id_global, latitud, longitud, nombre, propietario }
+    private fun enviarTerrenoAlPhp(
+        id: Int,
+        nombre: String,
+        propietario: String,
+        lat: Double,
+        lon: Double
+    ) {
+        val payload = JSONObject()
+            // Si quieres que sea exactamente "22_carlos", cambia a .put("id_global", "22_carlos")
+            .put("id_global", "${id}_${propietario.ifEmpty { "sinprop" }}")
+            .put("latitud", lat)
+            .put("longitud", lon)
+            .put("nombre", nombre)
+            .put("propietario", propietario)
+
+        val body = payload.toString()
+            .toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+
+        val req = Request.Builder()
+            .url(phpReceiverUrl)
+            .post(body)
+            .build()
+
+        client.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("PHP_POST", "Error enviando a PHP: ${e.message}", e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val resp = response.body?.string()
+                Log.d("PHP_POST", "Respuesta PHP: ${response.code} | $resp")
+                response.close()
             }
         })
     }

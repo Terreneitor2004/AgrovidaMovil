@@ -8,29 +8,47 @@
     tools:context=".MainActivity">
 
     <!-- Contenedor principal (barra + mapa) -->
-    <LinearLayout
-        android:orientation="vertical"
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:id="@+id/coordinatorRoot"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
         <!-- Barra superior -->
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
+        <com.google.android.material.appbar.AppBarLayout
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
-            android:title="AgroVida"
-            android:titleTextColor="@android:color/white"
-            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+            android:layout_height="wrap_content">
 
-        <!-- Tu mapa -->
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="?attr/colorPrimary"
+                android:title="AgroVida"
+                android:titleTextColor="@android:color/white"
+                app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+        </com.google.android.material.appbar.AppBarLayout>
+
+        <!-- Mapa ocupa todo el fondo -->
         <fragment
             android:id="@+id/fragmentMap"
             android:name="com.google.android.gms.maps.SupportMapFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:layout_gravity="center"
             tools:context=".MainActivity" />
-    </LinearLayout>
+
+        <!-- Bottom bar -->
+        <com.google.android.material.bottomappbar.BottomAppBar
+            android:id="@+id/bottomAppBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            app:hideOnScroll="true"
+            app:menu="@menu/menu_bottom" />
+
+
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
 
     <!-- Menú lateral -->
     <com.google.android.material.navigation.NavigationView
@@ -40,5 +58,6 @@
         android:layout_gravity="start"
         app:menu="@menu/menu_drawer"
         android:background="@android:color/white" />
+
 
 </androidx.drawerlayout.widget.DrawerLayout>

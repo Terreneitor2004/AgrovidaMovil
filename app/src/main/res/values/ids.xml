@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="fragmentMap" type="id" />
+    <item name="tvTitulo" type="id" />
+    <item name="etComentario" type="id" />
+    <item name="btnGuardarComentario" type="id" />
 </resources>

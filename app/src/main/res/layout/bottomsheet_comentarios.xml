@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:padding="20dp"
+    android:layout_width="match_parent" android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/tvTitulo" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Comentarios" android:textStyle="bold"/>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:hint="Escribe un comentario" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etComentario" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnGuardarComentario" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Guardar" android:layout_marginTop="12dp"/>
+
+    <ScrollView android:layout_width="match_parent" android:layout_height="300dp" android:layout_marginTop="8dp">
+        <LinearLayout android:id="@+id/layoutLista" android:orientation="vertical"
+            android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    </ScrollView>
+</LinearLayout>

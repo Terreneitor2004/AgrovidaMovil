@@ -6,6 +6,22 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import androidx.annotation.ColorInt
+import androidx.annotation.DrawableRes
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.graphics.drawable.DrawableCompat
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import android.view.LayoutInflater
+import android.widget.*
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.textfield.TextInputEditText
+
+
+
+
 
 object MapUtils {
 
@@ -107,6 +123,121 @@ object MapUtils {
                 }
             }
         }
+        dialog.show()
+    }
+    fun markerFromVector(context: AppCompatActivity, @DrawableRes drawableId: Int, @ColorInt tint: Int? = null): BitmapDescriptor {
+        val drawable = AppCompatResources.getDrawable(context, drawableId)!!.mutate()
+        if (tint != null) DrawableCompat.setTint(drawable, tint)
+
+        val bmp = Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return BitmapDescriptorFactory.fromBitmap(bmp)
+    }
+
+    // === NUEVO: BottomSheet para AGREGAR TERRENO ===
+    fun mostrarBottomSheetAgregarTerreno(
+        activity: AppCompatActivity,
+        latLng: LatLng,
+        weatherService: WeatherService,
+        terrenoRepo: TerrenoRepository,
+        map: GoogleMap,
+        markerMap: MutableMap<Marker, Int>
+    ) {
+        val dialog = BottomSheetDialog(activity)
+        val view = LayoutInflater.from(activity).inflate(R.layout.bottomsheet_terreno, null)
+        dialog.setContentView(view)
+
+        val etNombre = view.findViewById<TextInputEditText>(R.id.etNombre)
+        val etProp = view.findViewById<TextInputEditText>(R.id.etPropietario)
+        val tvClima = view.findViewById<TextView>(R.id.tvClima)
+        val btnGuardar = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnGuardar)
+
+        // Clima para esa lat/lon
+        weatherService.getWeather(latLng.latitude, latLng.longitude) {
+            activity.runOnUiThread { tvClima.text = "Clima: $it" }
+        }
+
+        btnGuardar.setOnClickListener {
+            val nombre = etNombre.text?.toString()?.trim().orEmpty()
+            val propietario = etProp.text?.toString()?.trim().orEmpty()
+
+            when {
+                nombre.isEmpty() -> etNombre.error = "Requerido"
+                propietario.isEmpty() -> etProp.error = "Requerido"
+                else -> {
+                    terrenoRepo.guardarTerreno(
+                        nombre = nombre,
+                        propietario = propietario,
+                        latLng = latLng,
+                        map = map,
+                        markerMap = markerMap,
+                        context = activity
+                    )
+                    dialog.dismiss()
+                }
+            }
+        }
+
+        // (Opcional) abrir expandido
+        dialog.setOnShowListener {
+            val sheet = dialog.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+            if (sheet != null) {
+                val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet)
+                behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+            }
+        }
+
+        dialog.show()
+    }
+
+    // === NUEVO: BottomSheet para COMENTARIOS ===
+    fun mostrarBottomSheetComentarios(
+        activity: AppCompatActivity,
+        terrenoId: Int,
+        nombreTerreno: String,
+        comentarioRepo: ComentarioRepository
+    ) {
+        val dialog = BottomSheetDialog(activity)
+        val view = LayoutInflater.from(activity).inflate(R.layout.bottomsheet_comentarios, null)
+        dialog.setContentView(view)
+
+        val tvTitulo = view.findViewById<TextView>(R.id.tvTitulo)
+        val etComentario = view.findViewById<TextInputEditText>(R.id.etComentario)
+        val btnGuardar = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnGuardarComentario)
+        val lista = view.findViewById<LinearLayout>(R.id.layoutLista)
+
+        tvTitulo.text = "Comentarios de $nombreTerreno"
+
+        // Cargar existentes
+        comentarioRepo.cargarComentarios(terrenoId, lista, activity)
+
+        btnGuardar.setOnClickListener {
+            val texto = etComentario.text?.toString()?.trim().orEmpty()
+            if (texto.isEmpty()) {
+                etComentario.error = "Escribe algo"
+                return@setOnClickListener
+            }
+            comentarioRepo.guardarComentario(terrenoId, texto, activity) { ok ->
+                if (ok) {
+                    etComentario.setText("")
+                    comentarioRepo.cargarComentarios(terrenoId, lista, activity)
+                }
+            }
+        }
+
+        // (Opcional) abrir expandido
+        dialog.setOnShowListener {
+            val sheet = dialog.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+            if (sheet != null) {
+                val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheet)
+                behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+            }
+        }
+
         dialog.show()
     }
 }

@@ -2,5 +2,12 @@
     <string name="app_name">Api Agrovida</string>
     <string name="navigation_drawer_open">Abrir menú</string>
     <string name="navigation_drawer_close">Cerrar menú</string>
+    <string name="comentarios">Comentarios</string>
+    <string name="escribe_un_comentario">Escribe un comentario</string>
+    <string name="guardar">Guardar</string>
+    <string name="nombre_del_terreno">Nombre del terreno</string>
+    <string name="propietario">Propietario</string>
+    <string name="cargando_clima">Cargando clima...</string>
+    <string name="guardar_terreno">Guardar terreno</string>
 
 </resources>

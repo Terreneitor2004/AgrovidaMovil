@@ -7,9 +7,11 @@ import android.os.Bundle
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -17,14 +19,21 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
+import com.google.android.material.bottomappbar.BottomAppBar
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
-import androidx.core.view.GravityCompat
-import androidx.core.content.ContextCompat
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
+import android.content.res.Configuration
+import com.google.android.gms.maps.model.MapStyleOptions
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.TextView
+
+
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -41,6 +50,26 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        val bottomAppBar = findViewById<BottomAppBar>(R.id.bottomAppBar)
+
+// Acciones del BottomAppBar
+        bottomAppBar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_list_terrenos -> {
+                    mostrarListaTerrenos() // ya lo tienes implementado
+                    true
+                }
+                R.id.action_recenter -> {
+                    // Recentrar a Guatemala (como ejemplo)
+                    val gt = LatLng(14.6349, -90.5069)
+                    map.animateCamera(CameraUpdateFactory.newLatLngZoom(gt, 7f))
+                    true
+                }
+                else -> false
+            }
+        }
+
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -75,27 +104,84 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
+
+        // ----- estilo oscuro/claro -----
+        val night = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+        val styleRes = if (night) R.raw.map_style_dark else R.raw.map_style_light
+        map.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, styleRes))
+
+        // ----- configuración visual del mapa -----
+        map.uiSettings.isMapToolbarEnabled = false
+        map.uiSettings.isCompassEnabled = true
+        map.uiSettings.isMyLocationButtonEnabled = false
+
+        // cámara inicial sobre Guatemala
         val inicio = LatLng(14.6349, -90.5069)
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(inicio, 7f))
 
+        // cargar terrenos existentes
         terrenoRepo.cargarTerrenos(map, markerTerrenoMap, this)
 
+        // ----- evento: click en el mapa -> agregar terreno -----
         map.setOnMapClickListener { latLng ->
-            MapUtils.mostrarDialogoAgregarTerreno(
+            MapUtils.mostrarBottomSheetAgregarTerreno(
                 this, latLng, weatherService, terrenoRepo, map, markerTerrenoMap
             )
         }
 
+        // ----- evento: click en marcador -> mostrar InfoWindow -----
         map.setOnMarkerClickListener { marker ->
+            marker.showInfoWindow()
+            true
+        }
+
+        // ----- InfoWindow personalizado (tarjeta Material) -----
+        map.setInfoWindowAdapter(object : GoogleMap.InfoWindowAdapter {
+            override fun getInfoWindow(marker: Marker): View? = null
+
+            override fun getInfoContents(marker: Marker): View {
+                val v = layoutInflater.inflate(R.layout.view_infowindow_terreno, null)
+
+                val tvNombre = v.findViewById<TextView>(R.id.tvNombre)
+                val tvProp = v.findViewById<TextView>(R.id.tvPropietario)
+                val tvClima = v.findViewById<TextView>(R.id.tvClima)
+                val tvAccion = v.findViewById<TextView>(R.id.tvAccion)
+
+                // el título llega como "Nombre — Propietario — Clima"
+                val parts = (marker.title ?: "").split(" — ")
+                val nombre = parts.getOrNull(0) ?: "Terreno"
+                val propietario = parts.getOrNull(1) ?: ""
+                val clima = parts.getOrNull(2) ?: ""
+
+                tvNombre.text = nombre
+
+                if (propietario.isNotEmpty()) {
+                    tvProp.visibility = View.VISIBLE
+                    tvProp.text = "Propietario: $propietario"
+                } else tvProp.visibility = View.GONE
+
+                if (clima.isNotEmpty()) {
+                    tvClima.visibility = View.VISIBLE
+                    tvClima.text = "Clima: $clima"
+                } else tvClima.visibility = View.GONE
+
+                tvAccion.text = "Ver comentarios"
+                return v
+            }
+        })
+
+        // ----- click en el InfoWindow -> abrir comentarios (BottomSheet) -----
+        map.setOnInfoWindowClickListener { marker ->
             val terrenoId = markerTerrenoMap[marker]
             if (terrenoId != null) {
-                MapUtils.mostrarDialogoComentarios(
+                MapUtils.mostrarBottomSheetComentarios(
                     this, terrenoId, marker.title ?: "Terreno", comentarioRepo
                 )
             }
-            true
         }
     }
+
 
     private fun startWeatherService() {
         val i = Intent(this, WeatherForegroundService::class.java)
@@ -246,6 +332,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         })
     }
+
+
 
     override fun onSupportNavigateUp(): Boolean {
         drawerLayout.openDrawer(GravityCompat.START)
