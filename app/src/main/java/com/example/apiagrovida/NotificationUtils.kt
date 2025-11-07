@@ -40,7 +40,6 @@ object NotificationUtils {
             .setAutoCancel(true)
             .build()
 
-        // 👇 Usa el NotificationManager del sistema (evita NotificationManagerCompat)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(notificationId, notification)
     }

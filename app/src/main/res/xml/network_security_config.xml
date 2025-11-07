@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
-        <!-- Cambia por la IP/host de tu amigo -->
         <domain includeSubdomains="true">34.132.245.216</domain>
     </domain-config>
 </network-security-config>

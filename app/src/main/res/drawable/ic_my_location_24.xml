@@ -4,8 +4,6 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
 
-    <!-- ANILLO (círculo exterior perfecto, sin cortes) -->
-    <!-- Dibuja un círculo grande y “perfora” uno pequeño dentro -->
     <path
         android:fillType="evenOdd"
         android:fillColor="#000000"
@@ -18,13 +16,10 @@
             A6,6 0 1,0 12,18
             A6,6 0 1,0 12,6
             Z" />
-
-    <!-- PUNTO CENTRAL -->
     <path
         android:fillColor="#000000"
         android:pathData="M12,9 A3,3 0 1,0 12,15 A3,3 0 1,0 12,9 Z" />
 
-    <!-- LÍNEAS CRUZADAS (fuera del anillo, no lo interrumpen) -->
     <path
         android:fillColor="@android:color/transparent"
         android:strokeColor="#000000"

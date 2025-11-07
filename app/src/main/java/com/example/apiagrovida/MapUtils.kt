@@ -39,11 +39,11 @@ object MapUtils {
         }
 
         val inputNombre = EditText(activity).apply { hint = "Nombre del terreno" }
-        val inputPropietario = EditText(activity).apply { hint = "Propietario" }   // ← NUEVO
+        val inputPropietario = EditText(activity).apply { hint = "Propietario" }
         val tvClima = TextView(activity).apply { text = "Cargando clima..." }
 
         layout.addView(inputNombre)
-        layout.addView(inputPropietario) // ← NUEVO
+        layout.addView(inputPropietario)
         layout.addView(tvClima)
 
         weatherService.getWeather(latLng.latitude, latLng.longitude) {
@@ -64,10 +64,9 @@ object MapUtils {
                         Toast.makeText(activity, "El propietario es obligatorio", Toast.LENGTH_SHORT).show()
                     }
                     else -> {
-                        // Ajusta el repo para aceptar propietario (ver snippet abajo)
                         terrenoRepo.guardarTerreno(
                             nombre = nombre,
-                            propietario = propietario,              // ← NUEVO
+                            propietario = propietario,
                             latLng = latLng,
                             map = map,
                             markerMap = markerMap,
@@ -136,7 +135,7 @@ object MapUtils {
         return BitmapDescriptorFactory.fromBitmap(bmp)
     }
 
-    // === NUEVO: BottomSheet para AGREGAR TERRENO ===
+    //AGREGAR TERRENO
     fun mostrarBottomSheetAgregarTerreno(
         activity: AppCompatActivity,
         latLng: LatLng,
@@ -154,7 +153,7 @@ object MapUtils {
         val tvClima = view.findViewById<TextView>(R.id.tvClima)
         val btnGuardar = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnGuardar)
 
-        // Clima para esa lat/lon
+        //Clima para esa lat/lon
         weatherService.getWeather(latLng.latitude, latLng.longitude) {
             activity.runOnUiThread { tvClima.text = "Clima: $it" }
         }
@@ -180,7 +179,6 @@ object MapUtils {
             }
         }
 
-        // (Opcional) abrir expandido
         dialog.setOnShowListener {
             val sheet = dialog.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
             if (sheet != null) {
@@ -193,7 +191,7 @@ object MapUtils {
         dialog.show()
     }
 
-    // === NUEVO: BottomSheet para COMENTARIOS ===
+    //COMENTARIOS
     fun mostrarBottomSheetComentarios(
         activity: AppCompatActivity,
         terrenoId: Int,
@@ -211,7 +209,7 @@ object MapUtils {
 
         tvTitulo.text = "Comentarios de $nombreTerreno"
 
-        // Cargar existentes
+        //Cargar existentes
         comentarioRepo.cargarComentarios(terrenoId, lista, activity)
 
         btnGuardar.setOnClickListener {

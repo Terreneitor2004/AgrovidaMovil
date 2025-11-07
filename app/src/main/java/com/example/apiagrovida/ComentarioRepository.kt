@@ -17,7 +17,7 @@ class ComentarioRepository {
     private val client = ApiClient.client
     private val baseUrl = ApiClient.BASE_URL
 
-    // 🔹 Guardar un nuevo comentario
+    //Guardar un nuevo comentario
     fun guardarComentario(
         terrenoId: Int,
         texto: String,
@@ -52,7 +52,7 @@ class ComentarioRepository {
         })
     }
 
-    // 🔹 Cargar comentarios (ahora con opciones de editar/eliminar)
+    //Cargar comentarios
     fun cargarComentarios(terrenoId: Int, layout: LinearLayout, context: Context) {
         val request = Request.Builder().url("$baseUrl/comentarios/$terrenoId").get().build()
 
@@ -79,7 +79,7 @@ class ComentarioRepository {
                                 val texto = c.getString("texto")
                                 val fecha = c.getString("fecha").substring(0, 10)
 
-                                // 🔸 Contenedor horizontal: texto + botones editar/eliminar
+                                //Contenedor horizontal: texto + botones editar/eliminar
                                 val fila = LinearLayout(context)
                                 fila.orientation = LinearLayout.HORIZONTAL
                                 fila.setPadding(0, 8, 0, 8)
@@ -115,7 +115,7 @@ class ComentarioRepository {
         })
     }
 
-    // 🔹 Mostrar diálogo para editar comentario
+    //Mostrar diálogo para editar comentario
     private fun mostrarDialogoEditarComentario(
         context: Context,
         comentarioId: Int,
@@ -139,7 +139,7 @@ class ComentarioRepository {
             .show()
     }
 
-    // 🔹 Llamada PUT para editar comentario
+    //Llamada PUT para editar comentario
     private fun editarComentario(
         context: Context,
         comentarioId: Int,
@@ -172,7 +172,7 @@ class ComentarioRepository {
         })
     }
 
-    // 🔹 Eliminar comentario con confirmación
+    //Eliminar comentario con confirmación
     private fun eliminarComentario(
         context: Context,
         comentarioId: Int,

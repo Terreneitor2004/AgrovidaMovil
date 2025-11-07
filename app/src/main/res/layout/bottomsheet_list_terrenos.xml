@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@android:color/white"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <!-- campo de búsqueda -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Buscar terreno"
+        app:boxStrokeColor="@color/verde_agrovida"
+        app:hintTextColor="@color/verde_agrovida"
+        app:startIconTint="@color/verde_agrovida">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etBuscar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/verde_agrovida"
+            android:imeOptions="actionSearch"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!--filtro -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipGroupSort"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        app:singleSelection="true">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipNombre"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nombre"
+            app:chipBackgroundColor="@color/verde_agrovida_suave"
+            app:chipStrokeColor="@color/verde_agrovida"
+            app:chipStrokeWidth="1dp"
+            app:checkedIconTint="@android:color/white"
+            app:checkedIconVisible="false"
+            app:chipIconTint="@color/verde_agrovida"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipPropietario"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Propietario"
+            app:chipBackgroundColor="@color/verde_agrovida_suave"
+            app:chipStrokeColor="@color/verde_agrovida"
+            app:chipStrokeWidth="1dp"
+            app:checkedIconVisible="false"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipRecientes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Recientes"
+            app:chipBackgroundColor="@color/verde_agrovida_suave"
+            app:chipStrokeColor="@color/verde_agrovida"
+            app:chipStrokeWidth="1dp"
+            app:checkedIconVisible="false"/>
+    </com.google.android.material.chip.ChipGroup>
+
+    <!-- lista -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvTerrenos"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        android:paddingTop="8dp"/>
+
+    <!-- texto de vacío -->
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="No hay terrenos"
+        android:textColor="@color/verde_agrovida"
+        android:gravity="center"
+        android:visibility="gone"
+        android:padding="16dp"/>
+</LinearLayout>

@@ -43,9 +43,6 @@ object WeatherTick {
                         weather.getWeather(lat, lon) { texto ->
                             synchronized(sb) { sb.appendLine("$nombre: $texto") }
 
-                            // Notificación por terreno (opcional):
-                            // NotificationUtils.showNotification(context, 2000 + i, "Clima - $nombre", texto)
-
                             if (done.incrementAndGet() == total) {
                                 val resumen = sb.toString().trim().ifEmpty { "Sin datos de clima" }
                                 NotificationUtils.showNotification(

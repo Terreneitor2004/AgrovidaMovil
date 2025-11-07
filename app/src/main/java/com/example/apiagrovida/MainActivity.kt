@@ -32,7 +32,7 @@ import com.google.android.gms.maps.model.MapStyleOptions
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
-
+import androidx.core.widget.addTextChangedListener
 
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -57,11 +57,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         bottomAppBar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_list_terrenos -> {
-                    mostrarListaTerrenos() // ya lo tienes implementado
+                    mostrarListaTerrenos()
                     true
                 }
                 R.id.action_recenter -> {
-                    // Recentrar a Guatemala (como ejemplo)
+                    // Recentrar a Guatemala
                     val gt = LatLng(14.6349, -90.5069)
                     map.animateCamera(CameraUpdateFactory.newLatLngZoom(gt, 7f))
                     true
@@ -105,38 +105,35 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
 
-        // ----- estilo oscuro/claro -----
+        //estilo oscuro/claro
         val night = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                 Configuration.UI_MODE_NIGHT_YES
         val styleRes = if (night) R.raw.map_style_dark else R.raw.map_style_light
         map.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, styleRes))
 
-        // ----- configuración visual del mapa -----
+        //configuración visual del mapa
         map.uiSettings.isMapToolbarEnabled = false
         map.uiSettings.isCompassEnabled = true
         map.uiSettings.isMyLocationButtonEnabled = false
 
-        // cámara inicial sobre Guatemala
+        //cámara inicial sobre Guatemala
         val inicio = LatLng(14.6349, -90.5069)
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(inicio, 7f))
 
         // cargar terrenos existentes
         terrenoRepo.cargarTerrenos(map, markerTerrenoMap, this)
 
-        // ----- evento: click en el mapa -> agregar terreno -----
         map.setOnMapClickListener { latLng ->
             MapUtils.mostrarBottomSheetAgregarTerreno(
                 this, latLng, weatherService, terrenoRepo, map, markerTerrenoMap
             )
         }
 
-        // ----- evento: click en marcador -> mostrar InfoWindow -----
         map.setOnMarkerClickListener { marker ->
             marker.showInfoWindow()
             true
         }
 
-        // ----- InfoWindow personalizado (tarjeta Material) -----
         map.setInfoWindowAdapter(object : GoogleMap.InfoWindowAdapter {
             override fun getInfoWindow(marker: Marker): View? = null
 
@@ -171,7 +168,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         })
 
-        // ----- click en el InfoWindow -> abrir comentarios (BottomSheet) -----
+        //abrir comentarios
         map.setOnInfoWindowClickListener { marker ->
             val terrenoId = markerTerrenoMap[marker]
             if (terrenoId != null) {
@@ -179,6 +176,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     this, terrenoId, marker.title ?: "Terreno", comentarioRepo
                 )
             }
+        }
+
+        // Controles de zoom
+        val zoomIn = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.btnZoomIn)
+        val zoomOut = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.btnZoomOut)
+
+        zoomIn.setOnClickListener {
+            val currentZoom = map.cameraPosition.zoom
+            map.animateCamera(CameraUpdateFactory.zoomTo(currentZoom + 1))
+        }
+
+        zoomOut.setOnClickListener {
+            val currentZoom = map.cameraPosition.zoom
+            map.animateCamera(CameraUpdateFactory.zoomTo(currentZoom - 1))
         }
     }
 
@@ -193,50 +204,114 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         stopService(i)
     }
 
-    // lista de terrenos: ahora muestra nombre y propietario
+    // lista de terrenos
     private fun mostrarListaTerrenos() {
-        val client = ApiClient.client
-        val request = Request.Builder().url("${ApiClient.BASE_URL}/terrenos").get().build()
+        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.bottomsheet_list_terrenos, null)
+        dialog.setContentView(view)
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
+        val etBuscar = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etBuscar)
+        val chipGroup = view.findViewById<com.google.android.material.chip.ChipGroup>(R.id.chipGroupSort)
+        val rv = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvTerrenos)
+        val tvEmpty = view.findViewById<TextView>(R.id.tvEmpty)
+
+        if (rv == null || etBuscar == null || chipGroup == null || tvEmpty == null) {
+            Toast.makeText(this, "Error de vista: revisa IDs del layout bottomsheet_list_terrenos", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        rv.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        val adapter = TerrenosAdapter(mutableListOf(),
+            onClick = { t ->
+                val target = LatLng(t.lat, t.lon)
+                map.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 14f))
+                val marker = markerTerrenoMap.entries.find { it.value == t.id }?.key
+                marker?.showInfoWindow()
+                dialog.dismiss()
+            },
+            onEdit = { t -> mostrarDialogoEditarTerreno(t.id, t.nombre) },
+            onDelete = { t -> eliminarTerreno(t.id) }
+        )
+        rv.adapter = adapter
+
+        val client = ApiClient.client
+        val request = okhttp3.Request.Builder().url("${ApiClient.BASE_URL}/terrenos").get().build()
+        client.newCall(request).enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
                 runOnUiThread {
-                    Toast.makeText(this@MainActivity, "Error al cargar terrenos", Toast.LENGTH_SHORT).show()
+                    tvEmpty.text = "Error de red"
+                    tvEmpty.visibility = View.VISIBLE
                 }
             }
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                val body = response.body?.string() ?: "[]"
+                if (!response.isSuccessful) {
+                    runOnUiThread {
+                        tvEmpty.text = "Error del servidor"
+                        tvEmpty.visibility = View.VISIBLE
+                    }
+                    return
+                }
+                val arr = org.json.JSONArray(body)
+                val list = mutableListOf<TerrenoItem>()
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    list.add(
+                        TerrenoItem(
+                            id = o.getInt("id"),
+                            nombre = o.optString("nombre", "Terreno"),
+                            propietario = o.optString("propietario", ""),
+                            lat = o.getDouble("latitud"),
+                            lon = o.getDouble("longitud")
+                        )
+                    )
+                }
+                runOnUiThread {
+                    adapter.update(list)
+                    tvEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
 
-            override fun onResponse(call: Call, response: Response) {
-                val body = response.body?.string()
-                if (response.isSuccessful && body != null) {
-                    val array = JSONArray(body)
-                    val nombres = mutableListOf<String>()
-                    val ids = mutableListOf<Int>()
-
-                    for (i in 0 until array.length()) {
-                        val t = array.getJSONObject(i)
-                        val nombre = t.optString("nombre", "Terreno")
-                        val propietario = t.optString("propietario", "")
-                        val itemTexto = if (propietario.isNotEmpty())
-                            "$nombre — $propietario" else nombre
-                        nombres.add(itemTexto)
-                        ids.add(t.getInt("id"))
+                    // buscar (usa core-ktx)
+                    etBuscar.addTextChangedListener { s ->
+                        val q = (s?.toString() ?: "").trim().lowercase()
+                        val filtered = list.filter {
+                            it.nombre.lowercase().contains(q) || it.propietario.lowercase().contains(q)
+                        }
+                        adapter.update(filtered)
+                        tvEmpty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
                     }
 
-                    runOnUiThread {
-                        AlertDialog.Builder(this@MainActivity)
-                            .setTitle("Lista de Terrenos")
-                            .setItems(nombres.toTypedArray()) { _, which ->
-                                val terrenoId = ids[which]
-                                val terrenoNombre = nombres[which]
-                                mostrarOpcionesTerreno(terrenoId, terrenoNombre)
-                            }
-                            .setPositiveButton("Cerrar", null)
-                            .show()
+                    chipGroup.check(R.id.chipRecientes)
+                    chipGroup.setOnCheckedStateChangeListener { _, _ ->
+                        val sorted = when (chipGroup.checkedChipId) {
+                            R.id.chipNombre -> adapterCurrent(adapter).sortedBy { it.nombre.lowercase() }
+                            R.id.chipPropietario -> adapterCurrent(adapter).sortedBy { it.propietario.lowercase() }
+                            else -> adapterCurrent(adapter).sortedByDescending { it.id } // recientes
+                        }
+                        adapter.update(sorted)
                     }
                 }
             }
         })
+
+        dialog.setOnShowListener {
+            val sheet = dialog.findViewById<android.widget.FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+            sheet?.let {
+                val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(it)
+                behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+            }
+        }
+
+        dialog.show()
     }
+
+    private fun adapterCurrent(adapter: TerrenosAdapter): List<TerrenoItem> {
+        val list = mutableListOf<TerrenoItem>()
+        for (i in 0 until adapter.itemCount) {
+        }
+        return list
+    }
+
 
     private fun mostrarOpcionesTerreno(id: Int, nombreActual: String) {
         val opciones = arrayOf("Editar nombre", "Eliminar terreno", "Cancelar")
@@ -323,17 +398,31 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun onResponse(call: Call, response: Response) {
                 runOnUiThread {
                     if (response.isSuccessful) {
-                        Toast.makeText(this@MainActivity, "Terreno eliminado", Toast.LENGTH_SHORT).show()
-                        terrenoRepo.cargarTerrenos(map, markerTerrenoMap, this@MainActivity)
+                        //Eliminar marcador
+                        val markerAEliminar = markerTerrenoMap.entries.find { it.value == id }?.key
+                        markerAEliminar?.remove()
+                        markerTerrenoMap.remove(markerAEliminar)
+
+                        //Eliminar de la lista
+                        try {
+                            val rv = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvTerrenos)
+                            val adapter = rv?.adapter as? TerrenosAdapter
+                            if (adapter != null) {
+                                val nuevaLista = adapter.getCurrentItems().toMutableList()
+                                val eliminado = nuevaLista.removeIf { it.id == id }
+                                if (eliminado) adapter.update(nuevaLista)
+                            }
+                        } catch (e: Exception) {
+                        }
+
+                        Toast.makeText(this@MainActivity, "Terreno eliminado correctamente", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this@MainActivity, "No se pudo eliminar el terreno", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, "Error del servidor al eliminar", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         })
     }
-
-
 
     override fun onSupportNavigateUp(): Boolean {
         drawerLayout.openDrawer(GravityCompat.START)

@@ -23,10 +23,10 @@ class TerrenoRepository {
     private val baseUrl = ApiClient.BASE_URL
     private val weatherService = WeatherService()
 
-    // URL del receptor PHP (ajústala si cambia la ruta)
+    //URL del receptor
     private val phpReceiverUrl = "http://34.132.245.216/Screens/recibeLands.php"
 
-    // GUARDAR TERRENO (agrega propietario)
+    //GUARDAR TERRENO
     fun guardarTerreno(
         nombre: String,
         propietario: String,
@@ -63,7 +63,7 @@ class TerrenoRepository {
                         try {
                             val id = JSONObject(respBody).getInt("id")
 
-                            // Enviar automáticamente al PHP con el JSON solicitado
+                            //Enviar automáticamente al PHP con el JSON solicitado
                             enviarTerrenoAlPhp(
                                 id = id,
                                 nombre = nombre,
@@ -102,7 +102,7 @@ class TerrenoRepository {
         })
     }
 
-    // CARGAR TERRENOS (lee y muestra propietario si viene en el JSON)
+    //carga terrenos, lee y muestra propietario si viene en el JSON
     fun cargarTerrenos(
         map: GoogleMap,
         markerMap: MutableMap<Marker, Int>,
@@ -160,7 +160,7 @@ class TerrenoRepository {
         })
     }
 
-    // ELIMINAR TERRENO
+    //eliminar terrenos
     fun eliminarTerreno(
         terrenoId: Int,
         map: GoogleMap,
@@ -194,7 +194,7 @@ class TerrenoRepository {
         })
     }
 
-    // Envía el JSON al PHP: construye { id_global, latitud, longitud, nombre, propietario }
+    // Envía el JSON al PHP, lo construye
     private fun enviarTerrenoAlPhp(
         id: Int,
         nombre: String,
@@ -203,7 +203,6 @@ class TerrenoRepository {
         lon: Double
     ) {
         val payload = JSONObject()
-            // Si quieres que sea exactamente "22_carlos", cambia a .put("id_global", "22_carlos")
             .put("id_global", "${id}_${propietario.ifEmpty { "sinprop" }}")
             .put("latitud", lat)
             .put("longitud", lon)

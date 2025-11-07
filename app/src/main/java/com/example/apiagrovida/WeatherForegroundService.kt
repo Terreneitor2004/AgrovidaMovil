@@ -29,7 +29,7 @@ class WeatherForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         try {
-            // Asegura el canal ANTES de construir la notificación
+            // Asegura el canal antes de construir la notificación
             NotificationUtils.ensureChannel(this)
 
             val ongoing: Notification = NotificationCompat.Builder(this, NotificationUtils.CHANNEL_ID)
@@ -39,10 +39,8 @@ class WeatherForegroundService : Service() {
                 .setOngoing(true)
                 .build()
 
-            // Obligatorio para FGS
             startForeground(12345, ongoing)
 
-            // Arranca el ciclo
             handler.post(runnable)
         } catch (e: Throwable) {
             Log.e(tag, "Error al iniciar FGS", e)
