@@ -62,7 +62,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:backgroundTint="@color/verde_agrovida"
-                app:srcCompat="@drawable/outline_add_24" />
+                app:srcCompat="@drawable/outline_add_24"
+                android:layout_marginBottom="12dp"/>
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/btnZoomOut"
