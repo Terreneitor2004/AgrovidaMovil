@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/terreno.dart';
 import '../state/terreno_store.dart';
 import '../widgets/terreno_form_dialog.dart';
+import 'terreno_detalle_page.dart';
 
 class MapaPage extends StatefulWidget {
   const MapaPage({super.key, required this.terrenoStore});
@@ -183,6 +184,23 @@ class _MapaPageState extends State<MapaPage> {
               '${terreno.longitud.toStringAsFixed(6)}',
             ),
             const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.of(context).push<void>(
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          TerrenoDetallePage(terreno: terreno),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.notes_outlined),
+                label: const Text('Ver observaciones'),
+              ),
+            ),
+            const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: FilledButton.tonalIcon(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/terreno.dart';
 import '../state/terreno_store.dart';
 import '../widgets/terreno_form_dialog.dart';
+import 'terreno_detalle_page.dart';
 
 enum _TerrenoSort { recientes, nombre, propietario }
 
@@ -138,6 +139,7 @@ class _TerrenosPageState extends State<TerrenosPage> {
                         final terreno = terrenos[index];
                         return _TerrenoCard(
                           terreno: terreno,
+                          onOpen: () => _openTerreno(terreno),
                           onEdit: () => _editTerreno(terreno),
                           onDelete: () => _deleteTerreno(terreno),
                         );
@@ -183,6 +185,14 @@ class _TerrenosPageState extends State<TerrenosPage> {
     await _runStoreAction(
       () => widget.terrenoStore.crear(terreno),
       successMessage: 'Terreno guardado en el teléfono.',
+    );
+  }
+
+  Future<void> _openTerreno(Terreno terreno) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (context) => TerrenoDetallePage(terreno: terreno),
+      ),
     );
   }
 
@@ -242,11 +252,13 @@ class _TerrenosPageState extends State<TerrenosPage> {
 class _TerrenoCard extends StatelessWidget {
   const _TerrenoCard({
     required this.terreno,
+    required this.onOpen,
     required this.onEdit,
     required this.onDelete,
   });
 
   final Terreno terreno;
+  final VoidCallback onOpen;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -254,6 +266,7 @@ class _TerrenoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
+        onTap: onOpen,
         contentPadding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
