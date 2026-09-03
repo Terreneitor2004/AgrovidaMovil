@@ -117,7 +117,7 @@ class _TerrenosPageState extends State<TerrenosPage> {
                     hasScrollBody: false,
                     child: _MessageState(
                       icon: _query.isEmpty
-                          ? Icons.landscape_outlined
+                          ? Icons.grid_view_outlined
                           : Icons.search_off,
                       title: _query.isEmpty
                           ? 'Todavía no hay terrenos'
@@ -271,7 +271,7 @@ class _TerrenoCard extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           child: Icon(
-            Icons.location_on_outlined,
+            Icons.grid_view_outlined,
             color: Theme.of(context).colorScheme.onPrimaryContainer,
           ),
         ),

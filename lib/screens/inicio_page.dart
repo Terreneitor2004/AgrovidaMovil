@@ -16,121 +16,198 @@ class InicioPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+        padding: const EdgeInsets.only(bottom: 28),
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'AgroVida',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
-                ),
-              ),
-              IconButton.filledTonal(
-                tooltip: 'Información',
-                onPressed: () => showAboutDialog(
-                  context: context,
-                  applicationName: 'AgroVida',
-                  applicationVersion: 'Prototipo Flutter',
-                  children: const [
-                    Text(
-                      'Agricultura de precisión enfocada inicialmente en banano.',
-                    ),
-                  ],
-                ),
-                icon: const Icon(Icons.info_outline),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
           Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1B5E20), Color(0xFF43A047)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(24),
-            ),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+            color: Theme.of(context).colorScheme.primary,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.eco_outlined, color: Colors.white, size: 42),
-                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.eco_outlined,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'AgroVida',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 25,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Agricultura de precisión',
+                            style: TextStyle(color: Color(0xFFDCECE1)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Información de AgroVida',
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.14),
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => showAboutDialog(
+                        context: context,
+                        applicationName: 'AgroVida',
+                        applicationVersion: 'Prototipo móvil',
+                        children: const [
+                          Text(
+                            'Gestión de parcelas y evidencias para el cultivo de banano.',
+                          ),
+                        ],
+                      ),
+                      icon: const Icon(Icons.info_outline),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
                 const Text(
-                  'Cultivo inicial: banano',
+                  'Resumen de campo',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 25,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 5),
                 const Text(
-                  'Registra parcelas y observaciones desde el campo, incluso sin conexión.',
-                  style: TextStyle(
-                    color: Color(0xFFE8F5E9),
-                    fontSize: 16,
-                    height: 1.4,
-                  ),
+                  'Información disponible en este dispositivo.',
+                  style: TextStyle(color: Color(0xFFE8F5E9)),
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 16),
                 AnimatedBuilder(
                   animation: terrenoStore,
                   builder: (context, _) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Text(
-                        '${terrenoStore.terrenos.length} terrenos guardados',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _SummaryMetric(
+                            value: '${terrenoStore.terrenos.length}',
+                            label: 'Terrenos\nregistrados',
+                            icon: Icons.grid_view_outlined,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: _SummaryMetric(
+                            value: 'GPS',
+                            label: 'Mapa y\ndelimitación',
+                            icon: Icons.location_searching_outlined,
+                          ),
+                        ),
+                      ],
                     );
                   },
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 26),
-          Text(
-            'Funciones principales',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Gestión de campo',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 12),
+                _HomeModule(
+                  icon: Icons.grid_view_rounded,
+                  title: 'Gestión de parcelas',
+                  description:
+                      'Administra terrenos, responsables y coordenadas.',
+                  status: 'Disponible',
+                  onTap: () => onOpenSection(1),
+                ),
+                _HomeModule(
+                  icon: Icons.location_on_outlined,
+                  title: 'Mapa de parcelas',
+                  description:
+                      'Ubica y delimita los lotes directamente en el mapa.',
+                  status: 'Disponible',
+                  onTap: () => onOpenSection(2),
+                ),
+                _HomeModule(
+                  icon: Icons.assignment_outlined,
+                  title: 'Actividades y evidencias',
+                  description:
+                      'Registra labores y fotografías dentro de cada terreno.',
+                  status: 'Por terreno',
+                  onTap: () => onOpenSection(1),
+                ),
+                _HomeModule(
+                  icon: Icons.eco_outlined,
+                  title: 'Diagnóstico de banano',
+                  description:
+                      'Prepara el análisis preliminar de fotografías del cultivo.',
+                  status: 'Próximamente',
+                  onTap: () => onOpenSection(3),
+                ),
+              ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({
+    required this.value,
+    required this.label,
+    required this.icon,
+  });
+
+  final String value;
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFFDCECE1), size: 20),
           const SizedBox(height: 12),
-          _HomeModule(
-            icon: Icons.landscape_outlined,
-            title: 'Mis terrenos',
-            description: 'Crea, busca, edita y elimina terrenos sin Internet.',
-            status: 'Disponible',
-            onTap: () => onOpenSection(1),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-          _HomeModule(
-            icon: Icons.map_outlined,
-            title: 'Mapa de parcelas',
-            description: 'Ubica tus terrenos con cartografía de OpenStreetMap.',
-            status: 'Disponible',
-            onTap: () => onOpenSection(2),
-          ),
-          _HomeModule(
-            icon: Icons.camera_alt_outlined,
-            title: 'Diagnóstico de banano',
-            description:
-                'Captura una hoja para obtener un resultado preliminar.',
-            status: 'Próximo avance',
-            onTap: () => onOpenSection(3),
-          ),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(color: Color(0xFFDCECE1))),
         ],
       ),
     );
@@ -163,12 +240,14 @@ class _HomeModule extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                child: Icon(
-                  icon,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(icon, color: Colors.white),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -191,12 +270,28 @@ class _HomeModule extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      status,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: status == 'Disponible'
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        status,
+                        style: TextStyle(
+                          color: status == 'Disponible'
+                              ? Theme.of(context).colorScheme.onPrimaryContainer
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],

@@ -16,36 +16,132 @@ class AgroVidaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const seedColor = Color(0xFF2E7D32);
+    const brandGreen = Color(0xFF123D2A);
+    const brandGreenDark = Color(0xFF0A2A1D);
+    const brandGreenSoft = Color(0xFFDCECE1);
+    const appBackground = Color(0xFFF4F7F4);
+    const ink = Color(0xFF17231C);
+    const outline = Color(0xFFD4DED6);
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: brandGreen,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: brandGreen,
+          onPrimary: Colors.white,
+          primaryContainer: brandGreenSoft,
+          onPrimaryContainer: brandGreenDark,
+          secondary: const Color(0xFF406B54),
+          surface: Colors.white,
+          onSurface: ink,
+          outline: outline,
+          surfaceContainerHighest: const Color(0xFFE8EEE9),
+        );
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'AgroVida',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: seedColor,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF6F8F3),
         useMaterial3: true,
+        colorScheme: colorScheme,
+        scaffoldBackgroundColor: appBackground,
+        textTheme: ThemeData.light().textTheme.apply(
+          bodyColor: ink,
+          displayColor: ink,
+          fontFamily: 'Roboto',
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          foregroundColor: ink,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: TextStyle(
+            color: ink,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: Colors.white,
+          elevation: 1,
+          indicatorColor: brandGreenSoft,
+          labelTextStyle: WidgetStateProperty.resolveWith(
+            (states) => TextStyle(
+              color: states.contains(WidgetState.selected)
+                  ? brandGreen
+                  : const Color(0xFF526158),
+              fontSize: 12,
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w700
+                  : FontWeight.w500,
+            ),
+          ),
+          iconTheme: WidgetStateProperty.resolveWith(
+            (states) => IconThemeData(
+              color: states.contains(WidgetState.selected)
+                  ? brandGreen
+                  : const Color(0xFF526158),
+            ),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: brandGreen,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(0, 46),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: brandGreen,
+            minimumSize: const Size(0, 44),
+            side: const BorderSide(color: outline),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: outline),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE0E7DC)),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: outline),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: brandGreen, width: 1.5),
           ),
         ),
         cardTheme: CardThemeData(
           elevation: 0,
           color: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: outline),
           ),
+        ),
+        dividerTheme: const DividerThemeData(color: outline, thickness: 1),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: brandGreen,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+        ),
+        snackBarTheme: const SnackBarThemeData(
+          backgroundColor: brandGreenDark,
+          contentTextStyle: TextStyle(color: Colors.white),
+          behavior: SnackBarBehavior.floating,
         ),
       ),
       home: AppShell(

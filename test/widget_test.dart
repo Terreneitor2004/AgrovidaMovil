@@ -14,8 +14,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AgroVida'), findsOneWidget);
-    expect(find.text('Cultivo inicial: banano'), findsOneWidget);
-    expect(find.text('Mis terrenos'), findsOneWidget);
+    expect(find.text('Resumen de campo'), findsOneWidget);
+    expect(find.text('Gestión de parcelas'), findsOneWidget);
     expect(find.text('Mapa'), findsOneWidget);
 
     await tester.tap(find.text('Terrenos'));

@@ -7,6 +7,7 @@ Future<Terreno?> showTerrenoFormDialog(
   Terreno? terreno,
   double? latitud,
   double? longitud,
+  List<PuntoBorde> limite = const [],
 }) {
   return showDialog<Terreno>(
     context: context,
@@ -14,16 +15,23 @@ Future<Terreno?> showTerrenoFormDialog(
       terreno: terreno,
       latitud: latitud,
       longitud: longitud,
+      limite: limite,
     ),
   );
 }
 
 class _TerrenoFormDialog extends StatefulWidget {
-  const _TerrenoFormDialog({this.terreno, this.latitud, this.longitud});
+  const _TerrenoFormDialog({
+    this.terreno,
+    this.latitud,
+    this.longitud,
+    this.limite = const [],
+  });
 
   final Terreno? terreno;
   final double? latitud;
   final double? longitud;
+  final List<PuntoBorde> limite;
 
   @override
   State<_TerrenoFormDialog> createState() => _TerrenoFormDialogState();
@@ -80,7 +88,7 @@ class _TerrenoFormDialogState extends State<_TerrenoFormDialog> {
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
                     labelText: 'Nombre del terreno',
-                    prefixIcon: Icon(Icons.landscape_outlined),
+                    prefixIcon: Icon(Icons.grid_view_outlined),
                   ),
                   validator: _requiredValidator,
                 ),
@@ -128,6 +136,13 @@ class _TerrenoFormDialogState extends State<_TerrenoFormDialog> {
                   const SizedBox(height: 10),
                   Text(
                     'También puedes tocar una ubicación en el mapa para completar las coordenadas.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+                if (!editing && widget.limite.length >= 3) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Se guardarán ${widget.limite.length} puntos para el borde del lote.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -185,6 +200,7 @@ class _TerrenoFormDialogState extends State<_TerrenoFormDialog> {
         latitud: _parseCoordinate(_latitudController.text)!,
         longitud: _parseCoordinate(_longitudController.text)!,
         creadoEn: original?.creadoEn ?? DateTime.now(),
+        limite: original?.limite ?? widget.limite,
       ),
     );
   }

@@ -15,17 +15,26 @@ class AgrovidaDatabase {
     final databasePath = join(await getDatabasesPath(), 'agrovida.db');
     final database = await openDatabase(
       databasePath,
-      version: 2,
+      version: 4,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
       onCreate: (db, version) async {
         await _createTerrenosTable(db);
         await _createObservacionesTable(db);
+        await _createActividadesTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await _createObservacionesTable(db);
+        }
+        if (oldVersion < 3) {
+          await db.execute(
+            'ALTER TABLE terrenos ADD COLUMN limite_json TEXT NOT NULL DEFAULT \'[]\'',
+          );
+        }
+        if (oldVersion < 4) {
+          await _createActividadesTable(db);
         }
       },
     );
@@ -41,7 +50,8 @@ class AgrovidaDatabase {
         propietario TEXT NOT NULL,
         latitud REAL NOT NULL,
         longitud REAL NOT NULL,
-        creado_en TEXT NOT NULL
+        creado_en TEXT NOT NULL,
+        limite_json TEXT NOT NULL DEFAULT '[]'
       )
     ''');
   }
@@ -59,6 +69,26 @@ class AgrovidaDatabase {
     await db.execute('''
       CREATE INDEX IF NOT EXISTS idx_observaciones_terreno
       ON observaciones(terreno_id)
+    ''');
+  }
+
+  Future<void> _createActividadesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE actividades(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        terreno_id INTEGER NOT NULL,
+        tipo TEXT NOT NULL,
+        descripcion TEXT NOT NULL,
+        estado TEXT NOT NULL,
+        fecha TEXT NOT NULL,
+        evidencia_ruta TEXT,
+        creado_en TEXT NOT NULL,
+        FOREIGN KEY (terreno_id) REFERENCES terrenos(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_actividades_terreno
+      ON actividades(terreno_id)
     ''');
   }
 }
