@@ -10,15 +10,21 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/terreno.dart';
 import '../state/terreno_store.dart';
 import '../widgets/lote_editor_panel.dart';
+import '../widgets/mapa_referencias_satelitales.dart';
 import '../widgets/terreno_form_dialog.dart';
 import 'terreno_detalle_page.dart';
 
 class MapaPage extends StatefulWidget {
-  const MapaPage({super.key, required this.terrenoStore, this.tileProvider});
+  const MapaPage({
+    super.key,
+    required this.terrenoStore,
+    this.tileProviderFactory,
+  });
 
   final TerrenoStore terrenoStore;
-  // Permite comprobar el dibujo con mosaicos locales, sin peticiones de red.
-  final TileProvider? tileProvider;
+  // Cada capa necesita su propio proveedor para cerrar sus conexiones al salir.
+  // La fábrica también permite comprobar el mapa sin peticiones de red.
+  final TileProvider Function()? tileProviderFactory;
 
   @override
   State<MapaPage> createState() => _MapaPageState();
@@ -65,7 +71,7 @@ class _MapaPageState extends State<MapaPage> {
   void initState() {
     super.initState();
     _tileProvider =
-        widget.tileProvider ??
+        widget.tileProviderFactory?.call() ??
         NetworkTileProvider(
           cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
             maxCacheSize: 300 * 1024 * 1024,
@@ -114,6 +120,7 @@ class _MapaPageState extends State<MapaPage> {
                     ),
                     children: [
                       TileLayer(
+                        key: const ValueKey('mapa-base'),
                         urlTemplate: _sateliteActivo
                             ? _urlMapaSatelital
                             : _urlMapaEstandar,
@@ -136,6 +143,13 @@ class _MapaPageState extends State<MapaPage> {
                         reset: _reinicioTiles.stream,
                         errorTileCallback: _registrarErrorDeTile,
                       ),
+                      if (_sateliteActivo)
+                        MapaReferenciasSatelitales(
+                          maxNativeZoom: _zoomNativoMapaSatelital,
+                          reset: _reinicioTiles.stream,
+                          onTileError: _registrarErrorDeTile,
+                          tileProviderFactory: widget.tileProviderFactory,
+                        ),
                       PolygonLayer(
                         polygons: [
                           ...terrenos
@@ -169,9 +183,7 @@ class _MapaPageState extends State<MapaPage> {
                                 strokeWidth: 3,
                                 borderColor: Colors.white,
                                 borderStrokeWidth: 1,
-                                pattern: StrokePattern.dashed(
-                                  segments: [8, 6],
-                                ),
+                                pattern: StrokePattern.dashed(segments: [8, 6]),
                               ),
                           ],
                         ),
@@ -199,7 +211,22 @@ class _MapaPageState extends State<MapaPage> {
                               ),
                           ],
                         ),
+                      Positioned(
+                        left: 14,
+                        right: 14,
+                        // Mantiene accesibles los créditos al delimitar.
+                        bottom: 48,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: MediaQuery.sizeOf(context).height * 0.44,
+                          ),
+                          child: SingleChildScrollView(
+                            child: _buildBorderControls(context),
+                          ),
+                        ),
+                      ),
                       RichAttributionWidget(
+                        alignment: AttributionAlignment.bottomLeft,
                         attributions: [
                           TextSourceAttribution(
                             _sateliteActivo
@@ -213,6 +240,17 @@ class _MapaPageState extends State<MapaPage> {
                               ),
                             ),
                           ),
+                          if (_sateliteActivo)
+                            TextSourceAttribution(
+                              'Límites y vías: Esri, HERE, Garmin, '
+                              '© OpenStreetMap contributors y comunidad GIS',
+                              onTap: () => launchUrl(
+                                Uri.parse(
+                                  'https://www.arcgis.com/home/item.html'
+                                  '?id=716b600dbbac433faa4bec9220c76b3a',
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ],
@@ -276,7 +314,7 @@ class _MapaPageState extends State<MapaPage> {
                   heroTag: 'switch_map_layer',
                   tooltip: _sateliteActivo
                       ? 'Usar mapa estándar'
-                      : 'Usar vista satelital',
+                      : 'Usar satélite con nombres',
                   onPressed: () {
                     final activarSatelite = !_sateliteActivo;
                     final camara = _mapController.camera;
@@ -309,19 +347,6 @@ class _MapaPageState extends State<MapaPage> {
                   tooltip: 'Mi ubicación',
                   onPressed: _irAMiUbicacion,
                   child: const Icon(Icons.my_location),
-                ),
-              ),
-              Positioned(
-                left: 14,
-                right: 14,
-                bottom: 16,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.sizeOf(context).height * 0.44,
-                  ),
-                  child: SingleChildScrollView(
-                    child: _buildBorderControls(context),
-                  ),
                 ),
               ),
             ],
@@ -407,7 +432,7 @@ class _MapaPageState extends State<MapaPage> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'No se pudo cargar el mapa. Revisa tu conexión.',
+                'No se pudo cargar parte del mapa. Revisa tu conexión.',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onErrorContainer,
                   fontWeight: FontWeight.w600,

@@ -5,6 +5,7 @@ import 'package:agrovida_movil/models/terreno.dart';
 import 'package:agrovida_movil/screens/mapa_page.dart';
 import 'package:agrovida_movil/state/terreno_store.dart';
 import 'package:agrovida_movil/widgets/lote_editor_panel.dart';
+import 'package:agrovida_movil/widgets/mapa_referencias_satelitales.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,7 +25,10 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: MapaPage(terrenoStore: store, tileProvider: MapTestTiles()),
+            body: MapaPage(
+              terrenoStore: store,
+              tileProviderFactory: MapTestTiles.new,
+            ),
             bottomNavigationBar: const SafeArea(
               top: false,
               child: SizedBox(height: 80),
@@ -111,10 +115,132 @@ void main() {
       await tester.pumpAndSettle();
     },
   );
+
+  testWidgets(
+    'alterna satélite con referencias sin perder cámara, dibujo ni proveedores',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(393, 852);
+      addTearDown(tester.view.reset);
+      final store = TerrenoStore(MapTestRepository());
+      addTearDown(store.dispose);
+      final providers = <MapTestTiles>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MapaPage(
+              terrenoStore: store,
+              tileProviderFactory: () {
+                final provider = MapTestTiles();
+                providers.add(provider);
+                return provider;
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(TileLayer), findsOneWidget);
+      expect(find.byType(MapaReferenciasSatelitales), findsNothing);
+      final map = tester.widget<FlutterMap>(find.byType(FlutterMap));
+      final controller = map.mapController!;
+      final initialCenter = controller.camera.center;
+      controller.move(initialCenter, 19);
+      await tester.pumpAndSettle();
+
+      for (var cycle = 0; cycle < 3; cycle++) {
+        await tester.tap(find.byTooltip('Usar satélite con nombres'));
+        await tester.pumpAndSettle();
+        final layers = tester.widgetList<TileLayer>(find.byType(TileLayer));
+        expect(layers.length, 3);
+        expect(layers.first.urlTemplate, contains('World_Imagery'));
+        expect(
+          layers.elementAt(1).urlTemplate,
+          contains('World_Transportation'),
+        );
+        expect(
+          layers.last.urlTemplate,
+          contains('World_Boundaries_and_Places'),
+        );
+        expect(layers.map((layer) => layer.tileProvider).toSet().length, 3);
+        expect(layers.every((layer) => layer.maxNativeZoom == 18), isTrue);
+        expect(controller.camera.zoom, 18);
+        expect(controller.camera.center, initialCenter);
+        final children = tester
+            .widget<FlutterMap>(find.byType(FlutterMap))
+            .children;
+        expect(
+          children.indexWhere((child) => child is MapaReferenciasSatelitales),
+          lessThan(children.indexWhere((child) => child is PolygonLayer)),
+        );
+        final references = providers.sublist(providers.length - 2);
+        expect(
+          references.every((provider) => provider.requests.isNotEmpty),
+          isTrue,
+        );
+        expect(
+          references.every((provider) => provider.disposeCount == 0),
+          isTrue,
+        );
+
+        if (cycle == 0) {
+          await tester.tap(find.text('Delimitar lote'));
+          await tester.pumpAndSettle();
+          for (final point in [
+            const Offset(85, 270),
+            const Offset(275, 285),
+            const Offset(195, 330),
+          ]) {
+            await tester.tapAt(point);
+            await tester.pump(const Duration(milliseconds: 400));
+          }
+        }
+        expect(
+          tester.widget<LoteEditorPanel>(find.byType(LoteEditorPanel)).puntos,
+          3,
+        );
+        await tester.tap(find.byTooltip('Attributions'));
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining('Límites y vías: Esri').hitTestable(),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.byIcon(Icons.cancel_outlined));
+        await tester.pumpAndSettle();
+        // Redibujar el panel no crea nuevas conexiones para las referencias.
+        expect(providers.length, 1 + (cycle + 1) * 2);
+        await tester.tap(find.byTooltip('Usar mapa estándar'));
+        await tester.pumpAndSettle();
+        expect(find.byType(TileLayer), findsOneWidget);
+        expect(
+          tester.widget<TileLayer>(find.byType(TileLayer)).urlTemplate,
+          contains('openstreetmap.org'),
+        );
+        expect(controller.camera.zoom, 18);
+        expect(controller.camera.center, initialCenter);
+        expect(
+          tester.widget<LoteEditorPanel>(find.byType(LoteEditorPanel)).puntos,
+          3,
+        );
+        expect(
+          references.every((provider) => provider.disposeCount == 1),
+          isTrue,
+        );
+        expect(providers.first.disposeCount, 0);
+        expect(tester.takeException(), isNull);
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      expect(providers.every((provider) => provider.disposeCount == 1), isTrue);
+    },
+  );
 }
 
 /// Mosaicos transparentes: la prueba verifica el dibujo sin red ni caché real.
 class MapTestTiles extends TileProvider {
+  int disposeCount = 0;
+  final requests = <String>[];
   final _image = MemoryImage(
     base64Decode(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
@@ -122,8 +248,17 @@ class MapTestTiles extends TileProvider {
   );
 
   @override
-  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) =>
-      _image;
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
+    assert(disposeCount == 0, 'No se debe reutilizar un proveedor cerrado.');
+    requests.add(getTileUrl(coordinates, options));
+    return _image;
+  }
+
+  @override
+  void dispose() {
+    disposeCount++;
+    super.dispose();
+  }
 }
 
 class MapTestRepository implements TerrenoRepository {
