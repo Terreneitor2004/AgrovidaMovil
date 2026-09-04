@@ -37,16 +37,31 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final page = switch (_selectedIndex) {
+      0 => InicioPage(
+        terrenoStore: widget.terrenoStore,
+        onOpenSection: _selectSection,
+      ),
+      1 => TerrenosPage(terrenoStore: widget.terrenoStore),
+      2 => MapaPage(terrenoStore: widget.terrenoStore),
+      _ => const DiagnosticoPage(),
+    };
+
     return Scaffold(
-      body: switch (_selectedIndex) {
-        0 => InicioPage(
-          terrenoStore: widget.terrenoStore,
-          onOpenSection: _selectSection,
-        ),
-        1 => TerrenosPage(terrenoStore: widget.terrenoStore),
-        2 => MapaPage(terrenoStore: widget.terrenoStore),
-        _ => const DiagnosticoPage(),
-      },
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 280),
+        reverseDuration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          final scale = Tween<double>(begin: 0.985, end: 1).animate(animation);
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(scale: scale, child: child),
+          );
+        },
+        child: KeyedSubtree(key: ValueKey(_selectedIndex), child: page),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _selectSection,

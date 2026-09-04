@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../state/terreno_store.dart';
 
-class InicioPage extends StatelessWidget {
+class InicioPage extends StatefulWidget {
   const InicioPage({
     super.key,
     required this.terrenoStore,
@@ -13,17 +13,46 @@ class InicioPage extends StatelessWidget {
   final ValueChanged<int> onOpenSection;
 
   @override
+  State<InicioPage> createState() => _InicioPageState();
+}
+
+class _InicioPageState extends State<InicioPage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _entranceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 760),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _entranceController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.only(bottom: 28),
         children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-            color: Theme.of(context).colorScheme.primary,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          _EntranceTransition(
+            animation: CurvedAnimation(
+              parent: _entranceController,
+              curve: const Interval(0, 0.58, curve: Curves.easeOutCubic),
+            ),
+            verticalOffset: 10,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+              color: Theme.of(context).colorScheme.primary,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 Row(
                   children: [
                     Container(
@@ -95,13 +124,13 @@ class InicioPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 AnimatedBuilder(
-                  animation: terrenoStore,
+                  animation: widget.terrenoStore,
                   builder: (context, _) {
                     return Row(
                       children: [
                         Expanded(
                           child: _SummaryMetric(
-                            value: '${terrenoStore.terrenos.length}',
+                            value: '${widget.terrenoStore.terrenos.length}',
                             label: 'Terrenos\nregistrados',
                             icon: Icons.grid_view_outlined,
                           ),
@@ -118,7 +147,8 @@ class InicioPage extends StatelessWidget {
                     );
                   },
                 ),
-              ],
+                ],
+              ),
             ),
           ),
           Padding(
@@ -126,44 +156,94 @@ class InicioPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Gestión de campo',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                _EntranceTransition(
+                  animation: CurvedAnimation(
+                    parent: _entranceController,
+                    curve: const Interval(
+                      0.18,
+                      0.62,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
+                  child: Text(
+                    'Gestión de campo',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
-                _HomeModule(
-                  icon: Icons.grid_view_rounded,
-                  title: 'Gestión de parcelas',
-                  description:
-                      'Administra terrenos, responsables y coordenadas.',
-                  status: 'Disponible',
-                  onTap: () => onOpenSection(1),
+                _EntranceTransition(
+                  animation: CurvedAnimation(
+                    parent: _entranceController,
+                    curve: const Interval(
+                      0.28,
+                      0.72,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
+                  child: _HomeModule(
+                    icon: Icons.grid_view_rounded,
+                    title: 'Gestión de parcelas',
+                    description:
+                        'Administra terrenos, responsables y coordenadas.',
+                    status: 'Disponible',
+                    onTap: () => widget.onOpenSection(1),
+                  ),
                 ),
-                _HomeModule(
-                  icon: Icons.location_on_outlined,
-                  title: 'Mapa de parcelas',
-                  description:
-                      'Ubica y delimita los lotes directamente en el mapa.',
-                  status: 'Disponible',
-                  onTap: () => onOpenSection(2),
+                _EntranceTransition(
+                  animation: CurvedAnimation(
+                    parent: _entranceController,
+                    curve: const Interval(
+                      0.38,
+                      0.82,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
+                  child: _HomeModule(
+                    icon: Icons.location_on_outlined,
+                    title: 'Mapa de parcelas',
+                    description:
+                        'Ubica y delimita los lotes directamente en el mapa.',
+                    status: 'Disponible',
+                    onTap: () => widget.onOpenSection(2),
+                  ),
                 ),
-                _HomeModule(
-                  icon: Icons.assignment_outlined,
-                  title: 'Actividades y evidencias',
-                  description:
-                      'Registra labores y fotografías dentro de cada terreno.',
-                  status: 'Por terreno',
-                  onTap: () => onOpenSection(1),
+                _EntranceTransition(
+                  animation: CurvedAnimation(
+                    parent: _entranceController,
+                    curve: const Interval(
+                      0.48,
+                      0.92,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
+                  child: _HomeModule(
+                    icon: Icons.assignment_outlined,
+                    title: 'Actividades y evidencias',
+                    description:
+                        'Registra labores y fotografías dentro de cada terreno.',
+                    status: 'Por terreno',
+                    onTap: () => widget.onOpenSection(1),
+                  ),
                 ),
-                _HomeModule(
-                  icon: Icons.eco_outlined,
-                  title: 'Diagnóstico de banano',
-                  description:
-                      'Prepara el análisis preliminar de fotografías del cultivo.',
-                  status: 'Próximamente',
-                  onTap: () => onOpenSection(3),
+                _EntranceTransition(
+                  animation: CurvedAnimation(
+                    parent: _entranceController,
+                    curve: const Interval(
+                      0.58,
+                      1,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
+                  child: _HomeModule(
+                    icon: Icons.eco_outlined,
+                    title: 'Diagnóstico de banano',
+                    description:
+                        'Prepara el análisis preliminar de fotografías del cultivo.',
+                    status: 'Próximamente',
+                    onTap: () => widget.onOpenSection(3),
+                  ),
                 ),
               ],
             ),
@@ -198,18 +278,56 @@ class _SummaryMetric extends StatelessWidget {
         children: [
           Icon(icon, color: const Color(0xFFDCECE1), size: 20),
           const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 240),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(scale: animation, child: child),
+            ),
+            child: Text(
+              value,
+              key: ValueKey(value),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           const SizedBox(height: 2),
           Text(label, style: const TextStyle(color: Color(0xFFDCECE1))),
         ],
       ),
+    );
+  }
+}
+
+class _EntranceTransition extends StatelessWidget {
+  const _EntranceTransition({
+    required this.animation,
+    required this.child,
+    this.verticalOffset = 16,
+  });
+
+  final Animation<double> animation;
+  final Widget child;
+  final double verticalOffset;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      child: child,
+      builder: (context, child) {
+        final value = animation.value;
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, verticalOffset * (1 - value)),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }
