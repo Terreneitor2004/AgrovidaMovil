@@ -14,6 +14,14 @@ void main() {
     await tester.pumpWidget(AgroVidaApp(terrenoStore: store));
     await tester.pumpAndSettle();
 
+    expect(find.text('Bienvenido'), findsOneWidget);
+    expect(find.text('Correo electrónico'), findsOneWidget);
+    expect(find.text('Contraseña'), findsOneWidget);
+
+    await tester.tap(find.text('Iniciar sesión'));
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
     expect(find.text('AgroVida'), findsOneWidget);
     expect(find.text('Resumen de campo'), findsOneWidget);
     expect(find.text('Gestión de parcelas'), findsOneWidget);
@@ -43,6 +51,13 @@ void main() {
     await tester.pumpWidget(AgroVidaApp(terrenoStore: store));
     await tester.pumpAndSettle();
 
+    final loginTitlePosition = tester.getTopLeft(find.text('AgroVida'));
+    expect(loginTitlePosition.dy, greaterThanOrEqualTo(47));
+
+    await tester.tap(find.text('Iniciar sesión'));
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
     final navigationBar = tester.widget<NavigationBar>(
       find.byType(NavigationBar),
     );
@@ -51,6 +66,21 @@ void main() {
     expect(navigationBar.maintainBottomViewPadding, isTrue);
     expect(titlePosition.dy, greaterThanOrEqualTo(47));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('muestra y oculta la contraseña en el acceso de demostración', (
+    tester,
+  ) async {
+    final store = TerrenoStore(_MemoryTerrenoRepository());
+    addTearDown(store.dispose);
+
+    await tester.pumpWidget(AgroVidaApp(terrenoStore: store));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Mostrar contraseña'), findsOneWidget);
+    await tester.tap(find.byTooltip('Mostrar contraseña'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Ocultar contraseña'), findsOneWidget);
   });
 }
 

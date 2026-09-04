@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'data/terreno_repository.dart';
 import 'screens/app_shell.dart';
+import 'screens/login_page.dart';
 import 'state/terreno_store.dart';
 
 Future<void> main() async {
@@ -146,11 +147,56 @@ class AgroVidaApp extends StatelessWidget {
           behavior: SnackBarBehavior.floating,
         ),
       ),
-      home: AppShell(
-        terrenoStore:
-            terrenoStore ?? TerrenoStore(SqliteTerrenoRepository.instance),
-        ownsStore: terrenoStore == null,
-      ),
+      home: _AppEntry(terrenoStore: terrenoStore),
+    );
+  }
+}
+
+class _AppEntry extends StatefulWidget {
+  const _AppEntry({this.terrenoStore});
+
+  final TerrenoStore? terrenoStore;
+
+  @override
+  State<_AppEntry> createState() => _AppEntryState();
+}
+
+class _AppEntryState extends State<_AppEntry> {
+  late final TerrenoStore _terrenoStore;
+  late final bool _ownsStore;
+  bool _showPrototype = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownsStore = widget.terrenoStore == null;
+    _terrenoStore =
+        widget.terrenoStore ?? TerrenoStore(SqliteTerrenoRepository.instance);
+  }
+
+  @override
+  void dispose() {
+    if (_ownsStore) _terrenoStore.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 420),
+      reverseDuration: const Duration(milliseconds: 260),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: _showPrototype
+          ? AppShell(
+              key: const ValueKey('app'),
+              terrenoStore: _terrenoStore,
+              ownsStore: false,
+            )
+          : LoginPage(
+              key: const ValueKey('login'),
+              onContinue: () => setState(() => _showPrototype = true),
+            ),
     );
   }
 }
