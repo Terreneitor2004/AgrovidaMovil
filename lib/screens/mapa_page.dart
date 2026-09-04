@@ -9,13 +9,16 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/terreno.dart';
 import '../state/terreno_store.dart';
+import '../widgets/lote_editor_panel.dart';
 import '../widgets/terreno_form_dialog.dart';
 import 'terreno_detalle_page.dart';
 
 class MapaPage extends StatefulWidget {
-  const MapaPage({super.key, required this.terrenoStore});
+  const MapaPage({super.key, required this.terrenoStore, this.tileProvider});
 
   final TerrenoStore terrenoStore;
+  // Permite comprobar el dibujo con mosaicos locales, sin peticiones de red.
+  final TileProvider? tileProvider;
 
   @override
   State<MapaPage> createState() => _MapaPageState();
@@ -35,10 +38,20 @@ class _MapaPageState extends State<MapaPage> {
   // Reutilizar el nivel 18 evita solicitar los mosaicos grises de error.
   static const _zoomNativoMapaSatelital = 18;
 
+  static const _colorBorrador = Color(0xFFB45309);
+  static const _coloresLotes = [
+    Color(0xFF15803D),
+    Color(0xFF2563EB),
+    Color(0xFFC2410C),
+    Color(0xFF7C3AED),
+    Color(0xFF0E7490),
+    Color(0xFFBE185D),
+  ];
+
   final _mapController = MapController();
   final _reinicioTiles = StreamController<void>.broadcast();
   final List<LatLng> _bordeBorrador = [];
-  late final NetworkTileProvider _tileProvider;
+  late final TileProvider _tileProvider;
   Timer? _temporizadorErrorMapa;
   LatLng? _ubicacionActual;
   double? _precisionUbicacionMetros;
@@ -51,11 +64,13 @@ class _MapaPageState extends State<MapaPage> {
   @override
   void initState() {
     super.initState();
-    _tileProvider = NetworkTileProvider(
-      cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
-        maxCacheSize: 300 * 1024 * 1024,
-      ),
-    );
+    _tileProvider =
+        widget.tileProvider ??
+        NetworkTileProvider(
+          cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
+            maxCacheSize: 300 * 1024 * 1024,
+          ),
+        );
   }
 
   @override
@@ -125,27 +140,12 @@ class _MapaPageState extends State<MapaPage> {
                         polygons: [
                           ...terrenos
                               .where((terreno) => terreno.tieneLimite)
-                              .map(
-                                (terreno) => Polygon(
-                                  points: terreno.limite
-                                      .map(
-                                        (punto) => LatLng(
-                                          punto.latitud,
-                                          punto.longitud,
-                                        ),
-                                      )
-                                      .toList(growable: false),
-                                  color: colorPrincipal.withValues(alpha: 0.16),
-                                  borderColor: colorPrincipal,
-                                  borderStrokeWidth: 2.5,
-                                ),
-                              ),
+                              .expand(_poligonosDelTerreno),
                           if (_bordeBorrador.length >= 3)
                             Polygon(
-                              points: _bordeBorrador,
-                              color: colorPrincipal.withValues(alpha: 0.25),
-                              borderColor: colorPrincipal,
-                              borderStrokeWidth: 3,
+                              points: List.of(_bordeBorrador),
+                              color: _colorBorrador.withValues(alpha: 0.18),
+                              borderStrokeWidth: 0,
                             ),
                         ],
                       ),
@@ -153,10 +153,26 @@ class _MapaPageState extends State<MapaPage> {
                         PolylineLayer(
                           polylines: [
                             Polyline(
-                              points: _bordeBorrador,
-                              color: colorPrincipal,
-                              strokeWidth: 3,
+                              points: List.of(_bordeBorrador),
+                              color: _colorBorrador,
+                              strokeWidth: 3.5,
+                              borderColor: Colors.white,
+                              borderStrokeWidth: 2,
                             ),
+                            if (_bordeBorrador.length >= 3)
+                              Polyline(
+                                points: [
+                                  _bordeBorrador.last,
+                                  _bordeBorrador.first,
+                                ],
+                                color: _colorBorrador,
+                                strokeWidth: 3,
+                                borderColor: Colors.white,
+                                borderStrokeWidth: 1,
+                                pattern: StrokePattern.dashed(
+                                  segments: [8, 6],
+                                ),
+                              ),
                           ],
                         ),
                       MarkerLayer(
@@ -179,7 +195,7 @@ class _MapaPageState extends State<MapaPage> {
                               _markerForDraftPoint(
                                 point: _bordeBorrador[index],
                                 number: index + 1,
-                                color: colorPrincipal,
+                                color: _colorBorrador,
                               ),
                           ],
                         ),
@@ -230,7 +246,7 @@ class _MapaPageState extends State<MapaPage> {
                         Expanded(
                           child: Text(
                             _dibujandoBorde
-                                ? 'Delimitación activa · agregue los vértices del lote (${_bordeBorrador.length})'
+                                ? 'Toque el mapa para marcar cada esquina'
                                 : 'Seleccione una ubicación para registrar un terreno · ${terrenos.length} registrados',
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
@@ -299,13 +315,45 @@ class _MapaPageState extends State<MapaPage> {
                 left: 14,
                 right: 14,
                 bottom: 16,
-                child: _buildBorderControls(context),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.sizeOf(context).height * 0.44,
+                  ),
+                  child: SingleChildScrollView(
+                    child: _buildBorderControls(context),
+                  ),
+                ),
               ),
             ],
           );
         },
       ),
     );
+  }
+
+  Color _colorDelTerreno(Terreno terreno) {
+    // El ID local no cambia al renombrar, ordenar o recargar los terrenos.
+    final identidad = terreno.id == null
+        ? terreno.creadoEn.millisecondsSinceEpoch
+        : terreno.id! - 1;
+    return _coloresLotes[identidad % _coloresLotes.length];
+  }
+
+  Iterable<Polygon> _poligonosDelTerreno(Terreno terreno) {
+    final puntos = terreno.limite
+        .map((punto) => LatLng(punto.latitud, punto.longitud))
+        .toList(growable: false);
+    final color = _colorDelTerreno(terreno);
+    return [
+      // Un halo claro mantiene el borde visible sobre vegetación y calles.
+      Polygon(points: puntos, borderColor: Colors.white, borderStrokeWidth: 6),
+      Polygon(
+        points: puntos,
+        color: color.withValues(alpha: _sateliteActivo ? 0.24 : 0.14),
+        borderColor: color,
+        borderStrokeWidth: 3,
+      ),
+    ];
   }
 
   Marker _markerForTerreno(Terreno terreno) {
@@ -317,13 +365,15 @@ class _MapaPageState extends State<MapaPage> {
         label: 'Terreno ${terreno.nombre}',
         button: true,
         child: GestureDetector(
-          onTap: () {
-            _enfocarTerreno(terreno);
-            _showTerreno(terreno);
-          },
+          onTap: _dibujandoBorde
+              ? null
+              : () {
+                  _enfocarTerreno(terreno);
+                  _showTerreno(terreno);
+                },
           child: Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
+              color: _colorDelTerreno(terreno),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 3),
               boxShadow: const [
@@ -444,50 +494,13 @@ class _MapaPageState extends State<MapaPage> {
       );
     }
 
-    final hectareas = _hectareasAproximadas(_bordeBorrador);
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _bordeBorrador.length < 3
-                  ? 'Agregue al menos 3 puntos para cerrar el lote.'
-                  : '${_bordeBorrador.length} puntos · área aproximada: ${hectareas.toStringAsFixed(2)} ha',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _bordeBorrador.isEmpty
-                      ? null
-                      : _deshacerUltimoPunto,
-                  icon: const Icon(Icons.undo),
-                  label: const Text('Deshacer punto'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _cancelarDibujoDeBorde,
-                  icon: const Icon(Icons.close),
-                  label: const Text('Cancelar'),
-                ),
-                FilledButton.icon(
-                  onPressed: _bordeBorrador.length >= 3
-                      ? _guardarBordeComoTerreno
-                      : null,
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text('Guardar lote'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return LoteEditorPanel(
+      puntos: _bordeBorrador.length,
+      hectareas: _hectareasAproximadas(_bordeBorrador),
+      perimetroMetros: _perimetroAproximado(_bordeBorrador),
+      onUndo: _deshacerUltimoPunto,
+      onCancel: _cancelarDibujoDeBorde,
+      onSave: _guardarBordeComoTerreno,
     );
   }
 
@@ -507,6 +520,13 @@ class _MapaPageState extends State<MapaPage> {
             color: color,
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black38,
+                blurRadius: 5,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
           child: Text(
             '$number',
@@ -738,6 +758,17 @@ class _MapaPageState extends State<MapaPage> {
     }
 
     return suma.abs() / 2 / 10000;
+  }
+
+  double _perimetroAproximado(List<LatLng> puntos) {
+    if (puntos.length < 2) return 0;
+    const distancia = Distance();
+    var metros = 0.0;
+    for (var i = 1; i < puntos.length; i++) {
+      metros += distancia(puntos[i - 1], puntos[i]);
+    }
+    if (puntos.length >= 3) metros += distancia(puntos.last, puntos.first);
+    return metros;
   }
 
   Future<void> _showTerreno(Terreno terreno) async {
