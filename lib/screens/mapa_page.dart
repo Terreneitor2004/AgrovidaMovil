@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -22,15 +23,45 @@ class MapaPage extends StatefulWidget {
 
 class _MapaPageState extends State<MapaPage> {
   static const _guatemala = LatLng(14.6349, -90.5069);
+  static const _urlMapaEstandar =
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  static const _urlMapaSatelital =
+      'https://services.arcgisonline.com/ArcGIS/rest/services/'
+      'World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  static const _zoomMaximo = 19.0;
+  static const _zoomNativoMapaEstandar = 19;
+
+  // En varias zonas rurales Esri deja de tener imágenes antes del nivel 19.
+  // Reutilizar el nivel 18 evita solicitar los mosaicos grises de error.
+  static const _zoomNativoMapaSatelital = 18;
+
   final _mapController = MapController();
+  final _reinicioTiles = StreamController<void>.broadcast();
   final List<LatLng> _bordeBorrador = [];
+  late final NetworkTileProvider _tileProvider;
+  Timer? _temporizadorErrorMapa;
   LatLng? _ubicacionActual;
   double? _precisionUbicacionMetros;
   bool _dibujandoBorde = false;
   bool _sateliteActivo = false;
+  bool _mostrarErrorMapa = false;
+  bool _actualizacionErrorPendiente = false;
+  int _erroresDeTiles = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _tileProvider = NetworkTileProvider(
+      cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
+        maxCacheSize: 300 * 1024 * 1024,
+      ),
+    );
+  }
 
   @override
   void dispose() {
+    _temporizadorErrorMapa?.cancel();
+    _reinicioTiles.close();
     _mapController.dispose();
     super.dispose();
   }
@@ -45,104 +76,139 @@ class _MapaPageState extends State<MapaPage> {
           final colorPrincipal = Theme.of(context).colorScheme.primary;
           return Stack(
             children: [
-              FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: _guatemala,
-                  initialZoom: 7,
-                  minZoom: 5,
-                  maxZoom: 19,
-                  onTap: (_, point) {
-                    if (_dibujandoBorde) {
-                      _agregarPuntoAlBorde(point);
-                    } else {
-                      _createAt(point);
-                    }
-                  },
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate: _sateliteActivo
-                        ? 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.agrovida.agrovida_movil',
-                  ),
-                  PolygonLayer(
-                    polygons: [
-                      ...terrenos
-                          .where((terreno) => terreno.tieneLimite)
-                          .map(
-                            (terreno) => Polygon(
-                              points: terreno.limite
-                                  .map(
-                                    (punto) =>
-                                        LatLng(punto.latitud, punto.longitud),
-                                  )
-                                  .toList(growable: false),
-                              color: colorPrincipal.withValues(alpha: 0.16),
+              RepaintBoundary(
+                child: ColoredBox(
+                  color: Theme.of(context).colorScheme.surfaceContainer,
+                  child: FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _guatemala,
+                      initialZoom: 7,
+                      minZoom: 5,
+                      maxZoom: _sateliteActivo
+                          ? _zoomNativoMapaSatelital.toDouble()
+                          : _zoomMaximo,
+                      onTap: (_, point) {
+                        if (_dibujandoBorde) {
+                          _agregarPuntoAlBorde(point);
+                        } else {
+                          _createAt(point);
+                        }
+                      },
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: _sateliteActivo
+                            ? _urlMapaSatelital
+                            : _urlMapaEstandar,
+                        userAgentPackageName: 'com.agrovida.agrovida_movil',
+                        tileProvider: _tileProvider,
+                        maxNativeZoom: _sateliteActivo
+                            ? _zoomNativoMapaSatelital
+                            : _zoomNativoMapaEstandar,
+                        maxZoom: _sateliteActivo
+                            ? _zoomNativoMapaSatelital.toDouble()
+                            : _zoomMaximo,
+                        panBuffer: 1,
+                        keepBuffer: 3,
+                        tileDisplay: const TileDisplay.fadeIn(
+                          duration: Duration(milliseconds: 140),
+                          reloadStartOpacity: 0.35,
+                        ),
+                        evictErrorTileStrategy:
+                            EvictErrorTileStrategy.notVisibleRespectMargin,
+                        reset: _reinicioTiles.stream,
+                        errorTileCallback: _registrarErrorDeTile,
+                      ),
+                      PolygonLayer(
+                        polygons: [
+                          ...terrenos
+                              .where((terreno) => terreno.tieneLimite)
+                              .map(
+                                (terreno) => Polygon(
+                                  points: terreno.limite
+                                      .map(
+                                        (punto) => LatLng(
+                                          punto.latitud,
+                                          punto.longitud,
+                                        ),
+                                      )
+                                      .toList(growable: false),
+                                  color: colorPrincipal.withValues(alpha: 0.16),
+                                  borderColor: colorPrincipal,
+                                  borderStrokeWidth: 2.5,
+                                ),
+                              ),
+                          if (_bordeBorrador.length >= 3)
+                            Polygon(
+                              points: _bordeBorrador,
+                              color: colorPrincipal.withValues(alpha: 0.25),
                               borderColor: colorPrincipal,
-                              borderStrokeWidth: 2.5,
+                              borderStrokeWidth: 3,
+                            ),
+                        ],
+                      ),
+                      if (_bordeBorrador.length >= 2)
+                        PolylineLayer(
+                          polylines: [
+                            Polyline(
+                              points: _bordeBorrador,
+                              color: colorPrincipal,
+                              strokeWidth: 3,
+                            ),
+                          ],
+                        ),
+                      MarkerLayer(
+                        markers: terrenos.map(_markerForTerreno).toList(),
+                      ),
+                      if (_ubicacionActual != null)
+                        MarkerLayer(
+                          markers: [
+                            _markerForCurrentLocation(_ubicacionActual!),
+                          ],
+                        ),
+                      if (_bordeBorrador.isNotEmpty)
+                        MarkerLayer(
+                          markers: [
+                            for (
+                              var index = 0;
+                              index < _bordeBorrador.length;
+                              index++
+                            )
+                              _markerForDraftPoint(
+                                point: _bordeBorrador[index],
+                                number: index + 1,
+                                color: colorPrincipal,
+                              ),
+                          ],
+                        ),
+                      RichAttributionWidget(
+                        attributions: [
+                          TextSourceAttribution(
+                            _sateliteActivo
+                                ? 'Imagery © Esri'
+                                : 'OpenStreetMap contributors',
+                            onTap: () => launchUrl(
+                              Uri.parse(
+                                _sateliteActivo
+                                    ? 'https://www.esri.com/en-us/legal/terms/full-master-agreement'
+                                    : 'https://www.openstreetmap.org/copyright',
+                              ),
                             ),
                           ),
-                      if (_bordeBorrador.length >= 3)
-                        Polygon(
-                          points: _bordeBorrador,
-                          color: colorPrincipal.withValues(alpha: 0.25),
-                          borderColor: colorPrincipal,
-                          borderStrokeWidth: 3,
-                        ),
-                    ],
-                  ),
-                  if (_bordeBorrador.length >= 2)
-                    PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: _bordeBorrador,
-                          color: colorPrincipal,
-                          strokeWidth: 3,
-                        ),
-                      ],
-                    ),
-                  MarkerLayer(
-                    markers: terrenos.map(_markerForTerreno).toList(),
-                  ),
-                  if (_ubicacionActual != null)
-                    MarkerLayer(
-                      markers: [_markerForCurrentLocation(_ubicacionActual!)],
-                    ),
-                  if (_bordeBorrador.isNotEmpty)
-                    MarkerLayer(
-                      markers: [
-                        for (
-                          var index = 0;
-                          index < _bordeBorrador.length;
-                          index++
-                        )
-                          _markerForDraftPoint(
-                            point: _bordeBorrador[index],
-                            number: index + 1,
-                            color: colorPrincipal,
-                          ),
-                      ],
-                    ),
-                  RichAttributionWidget(
-                    attributions: [
-                      TextSourceAttribution(
-                        _sateliteActivo
-                            ? 'Imagery © Esri'
-                            : 'OpenStreetMap contributors',
-                        onTap: () => launchUrl(
-                          Uri.parse(
-                            _sateliteActivo
-                                ? 'https://www.esri.com/en-us/legal/terms/full-master-agreement'
-                                : 'https://www.openstreetmap.org/copyright',
-                          ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
+              if (_mostrarErrorMapa)
+                Positioned(
+                  top: 188,
+                  left: 14,
+                  right: 14,
+                  child: _buildMapErrorBanner(context),
+                ),
               Positioned(
                 top: 14,
                 left: 14,
@@ -195,7 +261,21 @@ class _MapaPageState extends State<MapaPage> {
                       ? 'Usar mapa estándar'
                       : 'Usar vista satelital',
                   onPressed: () {
-                    setState(() => _sateliteActivo = !_sateliteActivo);
+                    final activarSatelite = !_sateliteActivo;
+                    final camara = _mapController.camera;
+                    if (activarSatelite &&
+                        camara.zoom > _zoomNativoMapaSatelital) {
+                      _mapController.move(
+                        camara.center,
+                        _zoomNativoMapaSatelital.toDouble(),
+                      );
+                    }
+                    _temporizadorErrorMapa?.cancel();
+                    setState(() {
+                      _sateliteActivo = activarSatelite;
+                      _erroresDeTiles = 0;
+                      _mostrarErrorMapa = false;
+                    });
                   },
                   child: Icon(
                     _sateliteActivo
@@ -258,6 +338,69 @@ class _MapaPageState extends State<MapaPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildMapErrorBanner(BuildContext context) {
+    return Material(
+      elevation: 3,
+      color: Theme.of(context).colorScheme.errorContainer,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+        child: Row(
+          children: [
+            Icon(
+              Icons.cloud_off_outlined,
+              color: Theme.of(context).colorScheme.onErrorContainer,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'No se pudo cargar el mapa. Revisa tu conexión.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: _reintentarMapa,
+              child: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _registrarErrorDeTile(TileImage _, Object _, StackTrace? _) {
+    _erroresDeTiles++;
+    if (_erroresDeTiles < 3 ||
+        _mostrarErrorMapa ||
+        _actualizacionErrorPendiente) {
+      return;
+    }
+
+    _actualizacionErrorPendiente = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _actualizacionErrorPendiente = false;
+      if (!mounted || _mostrarErrorMapa) return;
+
+      setState(() => _mostrarErrorMapa = true);
+      _temporizadorErrorMapa?.cancel();
+      _temporizadorErrorMapa = Timer(const Duration(seconds: 10), () {
+        if (mounted) setState(() => _mostrarErrorMapa = false);
+      });
+    });
+  }
+
+  void _reintentarMapa() {
+    _temporizadorErrorMapa?.cancel();
+    setState(() {
+      _erroresDeTiles = 0;
+      _mostrarErrorMapa = false;
+    });
+    _reinicioTiles.add(null);
   }
 
   Marker _markerForCurrentLocation(LatLng ubicacion) {
