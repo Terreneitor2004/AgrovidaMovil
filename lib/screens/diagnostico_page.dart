@@ -6,6 +6,7 @@ class DiagnosticoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      bottom: false,
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [

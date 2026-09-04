@@ -2,6 +2,7 @@ import 'package:agrovida_movil/data/terreno_repository.dart';
 import 'package:agrovida_movil/main.dart';
 import 'package:agrovida_movil/models/terreno.dart';
 import 'package:agrovida_movil/state/terreno_store.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -25,6 +26,31 @@ void main() {
     expect(find.text('Agregar terreno'), findsOneWidget);
 
     store.dispose();
+  });
+
+  testWidgets('respeta las zonas seguras de una pantalla tipo iPhone', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 3;
+    tester.view.physicalSize = const Size(1179, 2556);
+    tester.view.padding = const FakeViewPadding(top: 141, bottom: 102);
+    tester.view.viewPadding = const FakeViewPadding(top: 141, bottom: 102);
+    addTearDown(tester.view.reset);
+
+    final store = TerrenoStore(_MemoryTerrenoRepository());
+    addTearDown(store.dispose);
+
+    await tester.pumpWidget(AgroVidaApp(terrenoStore: store));
+    await tester.pumpAndSettle();
+
+    final navigationBar = tester.widget<NavigationBar>(
+      find.byType(NavigationBar),
+    );
+    final titlePosition = tester.getTopLeft(find.text('AgroVida'));
+
+    expect(navigationBar.maintainBottomViewPadding, isTrue);
+    expect(titlePosition.dy, greaterThanOrEqualTo(47));
+    expect(tester.takeException(), isNull);
   });
 }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../state/terreno_store.dart';
 import 'diagnostico_page.dart';
@@ -21,6 +22,17 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
+  static const _systemUiStyle = SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarBrightness: Brightness.light,
+    statusBarIconBrightness: Brightness.dark,
+    systemStatusBarContrastEnforced: false,
+    systemNavigationBarColor: Colors.white,
+    systemNavigationBarDividerColor: Colors.transparent,
+    systemNavigationBarIconBrightness: Brightness.dark,
+    systemNavigationBarContrastEnforced: false,
+  );
+
   int _selectedIndex = 0;
 
   @override
@@ -47,46 +59,56 @@ class _AppShellState extends State<AppShell> {
       _ => const DiagnosticoPage(),
     };
 
-    return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 280),
-        reverseDuration: const Duration(milliseconds: 220),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          final scale = Tween<double>(begin: 0.985, end: 1).animate(animation);
-          return FadeTransition(
-            opacity: animation,
-            child: ScaleTransition(scale: scale, child: child),
-          );
-        },
-        child: KeyedSubtree(key: ValueKey(_selectedIndex), child: page),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _selectSection,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Inicio',
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: _systemUiStyle,
+      child: Scaffold(
+        body: SafeArea(
+          bottom: false,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 280),
+            reverseDuration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) {
+              final scale = Tween<double>(
+                begin: 0.985,
+                end: 1,
+              ).animate(animation);
+              return FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(scale: scale, child: child),
+              );
+            },
+            child: KeyedSubtree(key: ValueKey(_selectedIndex), child: page),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.grid_view_outlined),
-            selectedIcon: Icon(Icons.grid_view_rounded),
-            label: 'Terrenos',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.location_on_outlined),
-            selectedIcon: Icon(Icons.location_on),
-            label: 'Mapa',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.eco_outlined),
-            selectedIcon: Icon(Icons.eco),
-            label: 'Diagnóstico',
-          ),
-        ],
+        ),
+        bottomNavigationBar: NavigationBar(
+          maintainBottomViewPadding: true,
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _selectSection,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Inicio',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.grid_view_outlined),
+              selectedIcon: Icon(Icons.grid_view_rounded),
+              label: 'Terrenos',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.location_on_outlined),
+              selectedIcon: Icon(Icons.location_on),
+              label: 'Mapa',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.eco_outlined),
+              selectedIcon: Icon(Icons.eco),
+              label: 'Diagnóstico',
+            ),
+          ],
+        ),
       ),
     );
   }

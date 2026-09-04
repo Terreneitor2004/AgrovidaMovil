@@ -38,6 +38,7 @@ class _InicioPageState extends State<InicioPage>
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      bottom: false,
       child: ListView(
         padding: const EdgeInsets.only(bottom: 28),
         children: [
@@ -53,100 +54,100 @@ class _InicioPageState extends State<InicioPage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(12),
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.eco_outlined,
+                          color: Colors.white,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.eco_outlined,
-                        color: Colors.white,
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'AgroVida',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 25,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Agricultura de precisión',
+                              style: TextStyle(color: Color(0xFFDCECE1)),
+                            ),
+                          ],
+                        ),
                       ),
+                      IconButton(
+                        tooltip: 'Información de AgroVida',
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: 0.14),
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () => showAboutDialog(
+                          context: context,
+                          applicationName: 'AgroVida',
+                          applicationVersion: 'Prototipo móvil',
+                          children: const [
+                            Text(
+                              'Gestión de parcelas y evidencias para el cultivo de banano.',
+                            ),
+                          ],
+                        ),
+                        icon: const Icon(Icons.info_outline),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Resumen de campo',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w700,
                     ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Información disponible en este dispositivo.',
+                    style: TextStyle(color: Color(0xFFE8F5E9)),
+                  ),
+                  const SizedBox(height: 16),
+                  AnimatedBuilder(
+                    animation: widget.terrenoStore,
+                    builder: (context, _) {
+                      return Row(
                         children: [
-                          Text(
-                            'AgroVida',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 25,
-                              fontWeight: FontWeight.w800,
+                          Expanded(
+                            child: _SummaryMetric(
+                              value: '${widget.terrenoStore.terrenos.length}',
+                              label: 'Terrenos\nregistrados',
+                              icon: Icons.grid_view_outlined,
                             ),
                           ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Agricultura de precisión',
-                            style: TextStyle(color: Color(0xFFDCECE1)),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: _SummaryMetric(
+                              value: 'GPS',
+                              label: 'Mapa y\ndelimitación',
+                              icon: Icons.location_searching_outlined,
+                            ),
                           ),
                         ],
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Información de AgroVida',
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.14),
-                        foregroundColor: Colors.white,
-                      ),
-                      onPressed: () => showAboutDialog(
-                        context: context,
-                        applicationName: 'AgroVida',
-                        applicationVersion: 'Prototipo móvil',
-                        children: const [
-                          Text(
-                            'Gestión de parcelas y evidencias para el cultivo de banano.',
-                          ),
-                        ],
-                      ),
-                      icon: const Icon(Icons.info_outline),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Resumen de campo',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w700,
+                      );
+                    },
                   ),
-                ),
-                const SizedBox(height: 5),
-                const Text(
-                  'Información disponible en este dispositivo.',
-                  style: TextStyle(color: Color(0xFFE8F5E9)),
-                ),
-                const SizedBox(height: 16),
-                AnimatedBuilder(
-                  animation: widget.terrenoStore,
-                  builder: (context, _) {
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: _SummaryMetric(
-                            value: '${widget.terrenoStore.terrenos.length}',
-                            label: 'Terrenos\nregistrados',
-                            icon: Icons.grid_view_outlined,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        const Expanded(
-                          child: _SummaryMetric(
-                            value: 'GPS',
-                            label: 'Mapa y\ndelimitación',
-                            icon: Icons.location_searching_outlined,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
                 ],
               ),
             ),
@@ -230,11 +231,7 @@ class _InicioPageState extends State<InicioPage>
                 _EntranceTransition(
                   animation: CurvedAnimation(
                     parent: _entranceController,
-                    curve: const Interval(
-                      0.58,
-                      1,
-                      curve: Curves.easeOutCubic,
-                    ),
+                    curve: const Interval(0.58, 1, curve: Curves.easeOutCubic),
                   ),
                   child: _HomeModule(
                     icon: Icons.eco_outlined,

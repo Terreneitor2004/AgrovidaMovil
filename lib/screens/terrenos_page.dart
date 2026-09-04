@@ -23,6 +23,7 @@ class _TerrenosPageState extends State<TerrenosPage> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      bottom: false,
       child: AnimatedBuilder(
         animation: widget.terrenoStore,
         builder: (context, _) {
