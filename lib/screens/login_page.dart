@@ -28,7 +28,6 @@ class _LoginPageState extends State<LoginPage>
 
   late final AnimationController _entranceController;
   bool _hidePassword = true;
-  bool _rememberMe = true;
   bool _isEntering = false;
 
   @override
@@ -97,12 +96,6 @@ class _LoginPageState extends State<LoginPage>
                               animation: _interval(0.18, 0.82),
                               offset: 28,
                               child: _buildLoginCard(context, compact),
-                            ),
-                            SizedBox(height: compact ? 14 : 20),
-                            _EntranceTransition(
-                              animation: _interval(0.55, 1),
-                              offset: 12,
-                              child: const _DemoNotice(),
                             ),
                           ],
                         ),
@@ -204,7 +197,7 @@ class _LoginPageState extends State<LoginPage>
               ),
               const SizedBox(height: 5),
               Text(
-                'Ingresa para administrar tus terrenos y actividades.',
+                'Ingrese sus datos',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.35,
@@ -258,43 +251,7 @@ class _LoginPageState extends State<LoginPage>
                       ),
                     ),
               ),
-              const SizedBox(height: 8),
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: Checkbox(
-                          value: _rememberMe,
-                          onChanged: _isEntering
-                              ? null
-                              : (value) => setState(
-                                  () => _rememberMe = value ?? false,
-                                ),
-                        ),
-                      ),
-                      const Text(
-                        'Recordarme',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                  TextButton(
-                    onPressed: _isEntering ? null : _showComingSoon,
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    child: const Text('Recuperar contraseña'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 24),
               FilledButton(
                 onPressed: _isEntering ? null : _enterPrototype,
                 style: FilledButton.styleFrom(
@@ -367,16 +324,6 @@ class _LoginPageState extends State<LoginPage>
     if (!mounted) return;
     widget.onContinue();
   }
-
-  void _showComingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'La recuperación estará disponible al conectar el servidor.',
-        ),
-      ),
-    );
-  }
 }
 
 class _LoginBackground extends StatelessWidget {
@@ -440,44 +387,6 @@ class _GlowCircle extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Colors.white.withValues(alpha: opacity),
-      ),
-    );
-  }
-}
-
-class _DemoNotice extends StatelessWidget {
-  const _DemoNotice();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.science_outlined,
-            size: 17,
-            color: Colors.white.withValues(alpha: 0.76),
-          ),
-          const SizedBox(width: 7),
-          Flexible(
-            child: Text(
-              'Modo demostración · sin servidor',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.76),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
