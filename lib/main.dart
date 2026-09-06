@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'data/terreno_repository.dart';
+import 'data/auth_repository.dart';
 import 'screens/app_shell.dart';
 import 'screens/login_page.dart';
 import 'state/terreno_store.dart';
@@ -13,9 +14,10 @@ Future<void> main() async {
 }
 
 class AgroVidaApp extends StatelessWidget {
-  const AgroVidaApp({super.key, this.terrenoStore});
+  const AgroVidaApp({super.key, this.terrenoStore, this.authRepository});
 
   final TerrenoStore? terrenoStore;
+  final AuthRepository? authRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -147,15 +149,19 @@ class AgroVidaApp extends StatelessWidget {
           behavior: SnackBarBehavior.floating,
         ),
       ),
-      home: _AppEntry(terrenoStore: terrenoStore),
+      home: _AppEntry(
+        terrenoStore: terrenoStore,
+        authRepository: authRepository,
+      ),
     );
   }
 }
 
 class _AppEntry extends StatefulWidget {
-  const _AppEntry({this.terrenoStore});
+  const _AppEntry({this.terrenoStore, this.authRepository});
 
   final TerrenoStore? terrenoStore;
+  final AuthRepository? authRepository;
 
   @override
   State<_AppEntry> createState() => _AppEntryState();
@@ -164,6 +170,8 @@ class _AppEntry extends StatefulWidget {
 class _AppEntryState extends State<_AppEntry> {
   late final TerrenoStore _terrenoStore;
   late final bool _ownsStore;
+  late final AuthRepository _authRepository;
+  late final bool _ownsAuthRepository;
   bool _showPrototype = false;
 
   @override
@@ -172,11 +180,14 @@ class _AppEntryState extends State<_AppEntry> {
     _ownsStore = widget.terrenoStore == null;
     _terrenoStore =
         widget.terrenoStore ?? TerrenoStore(SqliteTerrenoRepository.instance);
+    _ownsAuthRepository = widget.authRepository == null;
+    _authRepository = widget.authRepository ?? HttpAuthRepository();
   }
 
   @override
   void dispose() {
     if (_ownsStore) _terrenoStore.dispose();
+    if (_ownsAuthRepository) _authRepository.dispose();
     super.dispose();
   }
 
@@ -195,6 +206,7 @@ class _AppEntryState extends State<_AppEntry> {
             )
           : LoginPage(
               key: const ValueKey('login'),
+              authRepository: _authRepository,
               onContinue: () => setState(() => _showPrototype = true),
             ),
     );

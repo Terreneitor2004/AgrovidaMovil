@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/auth_repository.dart';
+
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key, required this.onContinue});
+  const LoginPage({
+    super.key,
+    required this.onContinue,
+    required this.authRepository,
+  });
 
   final VoidCallback onContinue;
+  final AuthRepository authRepository;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -27,8 +34,12 @@ class _LoginPageState extends State<LoginPage>
   );
 
   late final AnimationController _entranceController;
+  final _formKey = GlobalKey<FormState>();
+  final _usuarioController = TextEditingController();
+  final _contrasenaController = TextEditingController();
   bool _hidePassword = true;
   bool _isEntering = false;
+  String? _loginError;
 
   @override
   void initState() {
@@ -50,6 +61,8 @@ class _LoginPageState extends State<LoginPage>
   @override
   void dispose() {
     _entranceController.dispose();
+    _usuarioController.dispose();
+    _contrasenaController.dispose();
     super.dispose();
   }
 
@@ -183,118 +196,173 @@ class _LoginPageState extends State<LoginPage>
           compact ? 20 : 26,
         ),
         child: AutofillGroup(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Bienvenido',
-                style: TextStyle(
-                  color: Color(0xFF102219),
-                  fontSize: 27,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.4,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Bienvenido',
+                  style: TextStyle(
+                    color: Color(0xFF102219),
+                    fontSize: 27,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.4,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                'Ingrese sus datos',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  height: 1.35,
+                const SizedBox(height: 5),
+                Text(
+                  'Ingrese sus datos',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.35,
+                  ),
                 ),
-              ),
-              SizedBox(height: compact ? 20 : 26),
-              TextField(
-                enabled: !_isEntering,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                autofillHints: const [AutofillHints.email],
-                decoration: _inputDecoration(
-                  label: 'Correo electrónico',
-                  hint: 'nombre@empresa.com',
-                  icon: Icons.alternate_email_rounded,
+                SizedBox(height: compact ? 20 : 26),
+                TextFormField(
+                  controller: _usuarioController,
+                  enabled: !_isEntering,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.email],
+                  autocorrect: false,
+                  validator: _validateUsuario,
+                  decoration: _inputDecoration(
+                    label: 'Correo electrónico',
+                    hint: 'nombre@empresa.com',
+                    icon: Icons.alternate_email_rounded,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                enabled: !_isEntering,
-                obscureText: _hidePassword,
-                textInputAction: TextInputAction.done,
-                autofillHints: const [AutofillHints.password],
-                onSubmitted: (_) => _enterPrototype(),
-                decoration:
-                    _inputDecoration(
-                      label: 'Contraseña',
-                      hint: 'Ingresa tu contraseña',
-                      icon: Icons.lock_outline_rounded,
-                    ).copyWith(
-                      suffixIcon: IconButton(
-                        tooltip: _hidePassword
-                            ? 'Mostrar contraseña'
-                            : 'Ocultar contraseña',
-                        onPressed: _isEntering
-                            ? null
-                            : () => setState(
-                                () => _hidePassword = !_hidePassword,
-                              ),
-                        icon: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 180),
-                          transitionBuilder: (child, animation) =>
-                              FadeTransition(opacity: animation, child: child),
-                          child: Icon(
-                            _hidePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            key: ValueKey(_hidePassword),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _contrasenaController,
+                  enabled: !_isEntering,
+                  obscureText: _hidePassword,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.password],
+                  validator: _validateContrasena,
+                  onFieldSubmitted: (_) => _login(),
+                  decoration:
+                      _inputDecoration(
+                        label: 'Contraseña',
+                        hint: 'Ingresa tu contraseña',
+                        icon: Icons.lock_outline_rounded,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          tooltip: _hidePassword
+                              ? 'Mostrar contraseña'
+                              : 'Ocultar contraseña',
+                          onPressed: _isEntering
+                              ? null
+                              : () => setState(
+                                  () => _hidePassword = !_hidePassword,
+                                ),
+                          icon: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            transitionBuilder: (child, animation) =>
+                                FadeTransition(
+                                  opacity: animation,
+                                  child: child,
+                                ),
+                            child: Icon(
+                              _hidePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              key: ValueKey(_hidePassword),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _isEntering ? null : _enterPrototype,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(54),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
                 ),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: ScaleTransition(scale: animation, child: child),
-                  ),
-                  child: _isEntering
-                      ? const Row(
-                          key: ValueKey('loading'),
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 19,
-                              height: 19,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.3,
-                                color: Colors.white,
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: _loginError == null
+                      ? const SizedBox.shrink(key: ValueKey('without-error'))
+                      : Padding(
+                          key: const ValueKey('login-error'),
+                          padding: const EdgeInsets.only(top: 14),
+                          child: Semantics(
+                            liveRegion: true,
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.errorContainer,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline_rounded,
+                                    size: 20,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onErrorContainer,
+                                  ),
+                                  const SizedBox(width: 9),
+                                  Expanded(
+                                    child: Text(
+                                      _loginError!,
+                                      style: TextStyle(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onErrorContainer,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            SizedBox(width: 12),
-                            Text('Ingresando…'),
-                          ],
-                        )
-                      : const Row(
-                          key: ValueKey('ready'),
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('Iniciar sesión'),
-                            SizedBox(width: 9),
-                            Icon(Icons.arrow_forward_rounded, size: 20),
-                          ],
+                          ),
                         ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: _isEntering ? null : _login,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(scale: animation, child: child),
+                    ),
+                    child: _isEntering
+                        ? const Row(
+                            key: ValueKey('loading'),
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 19,
+                                height: 19,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.3,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text('Ingresando…'),
+                            ],
+                          )
+                        : const Row(
+                            key: ValueKey('ready'),
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('Iniciar sesión'),
+                              SizedBox(width: 9),
+                              Icon(Icons.arrow_forward_rounded, size: 20),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -316,13 +384,44 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
-  Future<void> _enterPrototype() async {
+  String? _validateUsuario(String? value) {
+    final usuario = value?.trim() ?? '';
+    if (usuario.isEmpty) return 'Ingrese su correo electrónico.';
+    final separator = usuario.indexOf('@');
+    if (separator <= 0 || separator == usuario.length - 1) {
+      return 'Ingrese un correo electrónico válido.';
+    }
+    return null;
+  }
+
+  String? _validateContrasena(String? value) {
+    if (value == null || value.isEmpty) return 'Ingrese su contraseña.';
+    return null;
+  }
+
+  Future<void> _login() async {
     if (_isEntering) return;
+    setState(() => _loginError = null);
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _isEntering = true);
-    await Future<void>.delayed(const Duration(milliseconds: 650));
+
+    final result = await widget.authRepository.login(
+      usuario: _usuarioController.text.trim(),
+      contrasena: _contrasenaController.text,
+    );
     if (!mounted) return;
-    widget.onContinue();
+    if (result.isSuccess) {
+      TextInput.finishAutofillContext();
+      widget.onContinue();
+      return;
+    }
+
+    setState(() {
+      _isEntering = false;
+      _loginError = result.message ?? 'No se pudo iniciar sesión.';
+    });
   }
 }
 

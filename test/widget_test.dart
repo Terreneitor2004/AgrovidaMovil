@@ -1,4 +1,5 @@
 import 'package:agrovida_movil/data/terreno_repository.dart';
+import 'package:agrovida_movil/data/auth_repository.dart';
 import 'package:agrovida_movil/main.dart';
 import 'package:agrovida_movil/models/terreno.dart';
 import 'package:agrovida_movil/state/terreno_store.dart';
@@ -11,15 +12,19 @@ void main() {
   ) async {
     final store = TerrenoStore(_MemoryTerrenoRepository());
 
-    await tester.pumpWidget(AgroVidaApp(terrenoStore: store));
+    await tester.pumpWidget(
+      AgroVidaApp(
+        terrenoStore: store,
+        authRepository: _SuccessfulAuthRepository(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Bienvenido'), findsOneWidget);
     expect(find.text('Correo electrónico'), findsOneWidget);
     expect(find.text('Contraseña'), findsOneWidget);
 
-    await tester.tap(find.text('Iniciar sesión'));
-    await tester.pump(const Duration(milliseconds: 700));
+    await _completeLogin(tester);
     await tester.pumpAndSettle();
 
     expect(find.text('AgroVida'), findsOneWidget);
@@ -48,14 +53,18 @@ void main() {
     final store = TerrenoStore(_MemoryTerrenoRepository());
     addTearDown(store.dispose);
 
-    await tester.pumpWidget(AgroVidaApp(terrenoStore: store));
+    await tester.pumpWidget(
+      AgroVidaApp(
+        terrenoStore: store,
+        authRepository: _SuccessfulAuthRepository(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     final loginTitlePosition = tester.getTopLeft(find.text('AgroVida'));
     expect(loginTitlePosition.dy, greaterThanOrEqualTo(47));
 
-    await tester.tap(find.text('Iniciar sesión'));
-    await tester.pump(const Duration(milliseconds: 700));
+    await _completeLogin(tester);
     await tester.pumpAndSettle();
 
     final navigationBar = tester.widget<NavigationBar>(
@@ -68,13 +77,16 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('muestra y oculta la contraseña en el acceso de demostración', (
-    tester,
-  ) async {
+  testWidgets('muestra y oculta la contraseña del login', (tester) async {
     final store = TerrenoStore(_MemoryTerrenoRepository());
     addTearDown(store.dispose);
 
-    await tester.pumpWidget(AgroVidaApp(terrenoStore: store));
+    await tester.pumpWidget(
+      AgroVidaApp(
+        terrenoStore: store,
+        authRepository: _SuccessfulAuthRepository(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('Mostrar contraseña'), findsOneWidget);
@@ -82,6 +94,71 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byTooltip('Ocultar contraseña'), findsOneWidget);
   });
+
+  testWidgets('valida datos y muestra el error enviado por el servidor', (
+    tester,
+  ) async {
+    final store = TerrenoStore(_MemoryTerrenoRepository());
+    addTearDown(store.dispose);
+
+    await tester.pumpWidget(
+      AgroVidaApp(terrenoStore: store, authRepository: _FailedAuthRepository()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Iniciar sesión'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ingrese su correo electrónico.'), findsOneWidget);
+    expect(find.text('Ingrese su contraseña.'), findsOneWidget);
+
+    await _completeLogin(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('Usuario o contraseña incorrectos.'), findsOneWidget);
+    expect(find.text('Resumen de campo'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+Future<void> _completeLogin(WidgetTester tester) async {
+  await tester.enterText(
+    find.widgetWithText(TextFormField, 'Correo electrónico'),
+    'juan@gmail.com',
+  );
+  await tester.enterText(
+    find.widgetWithText(TextFormField, 'Contraseña'),
+    'MiClave123',
+  );
+  await tester.tap(find.text('Iniciar sesión'));
+  await tester.pump();
+}
+
+class _SuccessfulAuthRepository implements AuthRepository {
+  @override
+  Future<LoginResult> login({
+    required String usuario,
+    required String contrasena,
+  }) async {
+    return const LoginResult(isSuccess: true);
+  }
+
+  @override
+  void dispose() {}
+}
+
+class _FailedAuthRepository implements AuthRepository {
+  @override
+  Future<LoginResult> login({
+    required String usuario,
+    required String contrasena,
+  }) async {
+    return const LoginResult(
+      isSuccess: false,
+      message: 'Usuario o contraseña incorrectos.',
+    );
+  }
+
+  @override
+  void dispose() {}
 }
 
 class _MemoryTerrenoRepository implements TerrenoRepository {
