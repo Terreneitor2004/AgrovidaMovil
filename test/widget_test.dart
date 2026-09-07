@@ -13,6 +13,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
 void main() {
+  testWidgets('muestra la animación inicial antes del login', (tester) async {
+    final store = TerrenoStore(_MemoryTerrenoRepository());
+    addTearDown(store.dispose);
+
+    await tester.pumpWidget(
+      AgroVidaApp(
+        terrenoStore: store,
+        authRepository: _SuccessfulAuthRepository(),
+      ),
+    );
+
+    expect(find.byKey(const ValueKey('splash-logo')), findsOneWidget);
+    expect(find.text('Bienvenido'), findsNothing);
+
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('splash-logo')), findsNothing);
+    expect(find.text('Bienvenido'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('muestra el tablero y permite abrir la lista de terrenos', (
     tester,
   ) async {

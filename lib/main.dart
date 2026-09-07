@@ -5,6 +5,7 @@ import 'data/terreno_repository.dart';
 import 'data/auth_repository.dart';
 import 'screens/app_shell.dart';
 import 'screens/login_page.dart';
+import 'screens/splash_page.dart';
 import 'state/terreno_store.dart';
 
 Future<void> main() async {
@@ -172,7 +173,8 @@ class _AppEntryState extends State<_AppEntry> {
   late final bool _ownsStore;
   late final AuthRepository _authRepository;
   late final bool _ownsAuthRepository;
-  bool _showPrototype = false;
+  bool _showSplash = true;
+  bool _isAuthenticated = false;
 
   @override
   void initState() {
@@ -193,22 +195,34 @@ class _AppEntryState extends State<_AppEntry> {
 
   @override
   Widget build(BuildContext context) {
+    final Widget page;
+    if (_showSplash) {
+      page = SplashPage(
+        key: const ValueKey('splash'),
+        onFinished: () {
+          if (mounted) setState(() => _showSplash = false);
+        },
+      );
+    } else if (_isAuthenticated) {
+      page = AppShell(
+        key: const ValueKey('app'),
+        terrenoStore: _terrenoStore,
+        ownsStore: false,
+      );
+    } else {
+      page = LoginPage(
+        key: const ValueKey('login'),
+        authRepository: _authRepository,
+        onContinue: () => setState(() => _isAuthenticated = true),
+      );
+    }
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 420),
       reverseDuration: const Duration(milliseconds: 260),
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
-      child: _showPrototype
-          ? AppShell(
-              key: const ValueKey('app'),
-              terrenoStore: _terrenoStore,
-              ownsStore: false,
-            )
-          : LoginPage(
-              key: const ValueKey('login'),
-              authRepository: _authRepository,
-              onContinue: () => setState(() => _showPrototype = true),
-            ),
+      child: page,
     );
   }
 }
