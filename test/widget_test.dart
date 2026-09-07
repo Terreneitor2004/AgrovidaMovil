@@ -1,10 +1,16 @@
+import 'dart:convert';
+
 import 'package:agrovida_movil/data/terreno_repository.dart';
 import 'package:agrovida_movil/data/auth_repository.dart';
 import 'package:agrovida_movil/main.dart';
 import 'package:agrovida_movil/models/terreno.dart';
+import 'package:agrovida_movil/screens/app_shell.dart';
+import 'package:agrovida_movil/screens/mapa_page.dart';
 import 'package:agrovida_movil/state/terreno_store.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart';
 
 void main() {
   testWidgets('muestra el tablero y permite abrir la lista de terrenos', (
@@ -117,6 +123,66 @@ void main() {
     expect(find.text('Resumen de campo'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('abre un terreno de la lista directamente en su ubicación', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(393, 852);
+    addTearDown(tester.view.reset);
+    final store = TerrenoStore(_MemoryTerrenoRepository());
+    addTearDown(store.dispose);
+    await store.crear(
+      Terreno(
+        nombre: 'Lote norte',
+        propietario: 'Responsable',
+        latitud: 14.6350,
+        longitud: -90.5068,
+        creadoEn: DateTime(2026, 9, 6),
+        limite: const [
+          PuntoBorde(latitud: 14.6352, longitud: -90.5072),
+          PuntoBorde(latitud: 14.6351, longitud: -90.5065),
+          PuntoBorde(latitud: 14.6345, longitud: -90.5066),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AppShell(
+          terrenoStore: store,
+          ownsStore: false,
+          mapTileProviderFactory: _WidgetTestTiles.new,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Terrenos'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Ver en mapa'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Ver en mapa'));
+    await tester.pumpAndSettle();
+
+    final mapPage = tester.widget<MapaPage>(find.byType(MapaPage));
+    expect(mapPage.terrenoInicial?.nombre, 'Lote norte');
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      2,
+    );
+    expect(find.text('Mostrando “Lote norte” en el mapa.'), findsOneWidget);
+    final camera = tester
+        .widget<FlutterMap>(find.byType(FlutterMap))
+        .mapController!
+        .camera;
+    for (final punto in store.terrenos.single.limite) {
+      expect(
+        camera.visibleBounds.contains(LatLng(punto.latitud, punto.longitud)),
+        isTrue,
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _completeLogin(WidgetTester tester) async {
@@ -185,4 +251,16 @@ class _MemoryTerrenoRepository implements TerrenoRepository {
 
   @override
   Future<List<Terreno>> obtenerTodos() async => List.of(_items);
+}
+
+class _WidgetTestTiles extends TileProvider {
+  final _image = MemoryImage(
+    base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    ),
+  );
+
+  @override
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) =>
+      _image;
 }

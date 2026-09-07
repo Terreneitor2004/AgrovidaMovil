@@ -18,10 +18,12 @@ class MapaPage extends StatefulWidget {
   const MapaPage({
     super.key,
     required this.terrenoStore,
+    this.terrenoInicial,
     this.tileProviderFactory,
   });
 
   final TerrenoStore terrenoStore;
+  final Terreno? terrenoInicial;
   // Cada capa necesita su propio proveedor para cerrar sus conexiones al salir.
   // La fábrica también permite comprobar el mapa sin peticiones de red.
   final TileProvider Function()? tileProviderFactory;
@@ -104,8 +106,14 @@ class _MapaPageState extends State<MapaPage> {
                   child: FlutterMap(
                     mapController: _mapController,
                     options: MapOptions(
-                      initialCenter: _guatemala,
-                      initialZoom: 7,
+                      initialCenter: widget.terrenoInicial == null
+                          ? _guatemala
+                          : LatLng(
+                              widget.terrenoInicial!.latitud,
+                              widget.terrenoInicial!.longitud,
+                            ),
+                      initialZoom: widget.terrenoInicial == null ? 7 : 16,
+                      initialCameraFit: _ajusteInicialDelTerreno(),
                       minZoom: 5,
                       maxZoom: _sateliteActivo
                           ? _zoomNativoMapaSatelital.toDouble()
@@ -362,6 +370,21 @@ class _MapaPageState extends State<MapaPage> {
         ? terreno.creadoEn.millisecondsSinceEpoch
         : terreno.id! - 1;
     return _coloresLotes[identidad % _coloresLotes.length];
+  }
+
+  CameraFit? _ajusteInicialDelTerreno() {
+    final terreno = widget.terrenoInicial;
+    if (terreno == null || !terreno.tieneLimite) return null;
+
+    final puntos = terreno.limite
+        .map((punto) => LatLng(punto.latitud, punto.longitud))
+        .toList(growable: false);
+    return CameraFit.bounds(
+      bounds: LatLngBounds.fromPoints(puntos),
+      padding: const EdgeInsets.fromLTRB(48, 180, 48, 150),
+      minZoom: 5,
+      maxZoom: 18,
+    );
   }
 
   Iterable<Polygon> _poligonosDelTerreno(Terreno terreno) {

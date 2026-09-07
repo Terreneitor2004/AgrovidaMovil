@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
 
+import '../models/terreno.dart';
 import '../state/terreno_store.dart';
 import 'diagnostico_page.dart';
 import 'inicio_page.dart';
@@ -12,10 +14,12 @@ class AppShell extends StatefulWidget {
     super.key,
     required this.terrenoStore,
     required this.ownsStore,
+    this.mapTileProviderFactory,
   });
 
   final TerrenoStore terrenoStore;
   final bool ownsStore;
+  final TileProvider Function()? mapTileProviderFactory;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -34,6 +38,7 @@ class _AppShellState extends State<AppShell> {
   );
 
   int _selectedIndex = 0;
+  Terreno? _terrenoParaMapa;
 
   @override
   void initState() {
@@ -54,8 +59,15 @@ class _AppShellState extends State<AppShell> {
         terrenoStore: widget.terrenoStore,
         onOpenSection: _selectSection,
       ),
-      1 => TerrenosPage(terrenoStore: widget.terrenoStore),
-      2 => MapaPage(terrenoStore: widget.terrenoStore),
+      1 => TerrenosPage(
+        terrenoStore: widget.terrenoStore,
+        onShowOnMap: _showTerrenoOnMap,
+      ),
+      2 => MapaPage(
+        terrenoStore: widget.terrenoStore,
+        terrenoInicial: _terrenoParaMapa,
+        tileProviderFactory: widget.mapTileProviderFactory,
+      ),
       _ => const DiagnosticoPage(),
     };
 
@@ -114,6 +126,21 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _selectSection(int index) {
-    setState(() => _selectedIndex = index);
+    setState(() {
+      _selectedIndex = index;
+      _terrenoParaMapa = null;
+    });
+  }
+
+  void _showTerrenoOnMap(Terreno terreno) {
+    setState(() {
+      _terrenoParaMapa = terreno;
+      _selectedIndex = 2;
+    });
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text('Mostrando “${terreno.nombre}” en el mapa.')),
+      );
   }
 }

@@ -8,9 +8,14 @@ import 'terreno_detalle_page.dart';
 enum _TerrenoSort { recientes, nombre, propietario }
 
 class TerrenosPage extends StatefulWidget {
-  const TerrenosPage({super.key, required this.terrenoStore});
+  const TerrenosPage({
+    super.key,
+    required this.terrenoStore,
+    required this.onShowOnMap,
+  });
 
   final TerrenoStore terrenoStore;
+  final ValueChanged<Terreno> onShowOnMap;
 
   @override
   State<TerrenosPage> createState() => _TerrenosPageState();
@@ -141,6 +146,7 @@ class _TerrenosPageState extends State<TerrenosPage> {
                         return _TerrenoCard(
                           terreno: terreno,
                           onOpen: () => _openTerreno(terreno),
+                          onShowOnMap: () => widget.onShowOnMap(terreno),
                           onEdit: () => _editTerreno(terreno),
                           onDelete: () => _deleteTerreno(terreno),
                         );
@@ -254,12 +260,14 @@ class _TerrenoCard extends StatelessWidget {
   const _TerrenoCard({
     required this.terreno,
     required this.onOpen,
+    required this.onShowOnMap,
     required this.onEdit,
     required this.onDelete,
   });
 
   final Terreno terreno;
   final VoidCallback onOpen;
+  final VoidCallback onShowOnMap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -288,11 +296,21 @@ class _TerrenoCard extends StatelessWidget {
           ),
         ),
         isThreeLine: true,
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
-          itemBuilder: (context) => const [
-            PopupMenuItem(value: 'edit', child: Text('Editar')),
-            PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton.filledTonal(
+              tooltip: 'Ver en mapa',
+              onPressed: onShowOnMap,
+              icon: const Icon(Icons.location_on_outlined),
+            ),
+            PopupMenuButton<String>(
+              onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'edit', child: Text('Editar')),
+                PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+              ],
+            ),
           ],
         ),
       ),
